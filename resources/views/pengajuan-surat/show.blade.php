@@ -5,15 +5,19 @@
 @section('content')
 <div class="row">
     <div class="col-lg-8">
-        <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <div class="detail-panel mb-3">
+            <div class="detail-panel-header d-flex flex-column flex-md-row justify-content-between gap-3">
                 <div>
+                    <div class="section-kicker">Detail Pengajuan</div>
                     <h5 class="mb-0"><i class="fas fa-file-alt me-2 text-primary"></i>{{ $pengajuanSurat->nomor_pengajuan }}</h5>
                     <small class="text-muted">{{ $pengajuanSurat->jenisSurat->nama }}</small>
                 </div>
-                <span class="badge bg-primary">{{ $pengajuanSurat->status_label }}</span>
+                <div class="text-md-end">
+                    <span class="badge bg-primary mb-2">{{ $pengajuanSurat->status_label }}</span>
+                    <div class="stage-chip"><i class="fas fa-location-dot"></i>{{ $pengajuanSurat->tahap_label }}</div>
+                </div>
             </div>
-            <div class="card-body">
+            <div class="p-4">
                 <div class="row g-3">
                     <div class="col-md-6">
                         <div class="text-muted small">Tanggal Pengajuan</div>
@@ -45,11 +49,11 @@
             </div>
         </div>
 
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white">
+        <div class="detail-panel">
+            <div class="detail-panel-header">
                 <strong><i class="fas fa-route me-2 text-primary"></i>Status Roadmap Pengajuan</strong>
             </div>
-            <div class="card-body">
+            <div class="p-4">
                 @php
                 $steps = [
                     'diajukan' => 'Diajukan',
@@ -76,13 +80,13 @@
     </div>
 
     <div class="col-lg-4">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-light">
+        <div class="detail-panel">
+            <div class="detail-panel-header">
                 <strong><i class="fas fa-info-circle me-2 text-primary"></i>Catatan Fase 1</strong>
             </div>
-            <div class="card-body">
+            <div class="p-3">
                 <p class="small text-muted mb-3">
-                    Modul ini baru menyiapkan master jenis surat, struktur pengajuan, dan status awal. Form persyaratan, template HTML/PDF/DOCX, approval final, digital signature, dan QR code dikerjakan pada fase berikutnya.
+                    Status `Diajukan` berarti pengajuan sudah masuk antrean. Jika tahapnya menampilkan Kasi, berarti dokumen sedang menunggu pemeriksaan Kasi.
                 </p>
                 <a href="{{ route('pengajuan-surat.index') }}" class="btn btn-light border w-100">
                     <i class="fas fa-arrow-left me-2"></i>Kembali
@@ -91,4 +95,41 @@
         </div>
     </div>
 </div>
+<style>
+    .section-kicker {
+        color: #0f766e;
+        font-size: .72rem;
+        font-weight: 800;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+    }
+
+    .detail-panel {
+        background: #fff;
+        border: 1px solid #dfe7ef;
+        border-radius: 8px;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, .05);
+        overflow: hidden;
+    }
+
+    .detail-panel-header {
+        background: #f8fafc;
+        border-bottom: 1px solid #e7edf3;
+        padding: 16px 18px;
+    }
+
+    .stage-chip {
+        align-items: center;
+        background: #ecfdf5;
+        border: 1px solid #bbf7d0;
+        border-radius: 999px;
+        color: #166534;
+        display: inline-flex;
+        font-size: .78rem;
+        font-weight: 700;
+        gap: 7px;
+        padding: 5px 10px;
+        white-space: nowrap;
+    }
+</style>
 @endsection

@@ -57,4 +57,21 @@ class PengajuanSurat extends Model
     {
         return self::STATUS[$this->status] ?? ucfirst((string) $this->status);
     }
+
+    public function getTahapLabelAttribute(): string
+    {
+        if ($this->status === 'diajukan' && $this->posisi?->role === 'kasi') {
+            return 'Menunggu pemeriksaan Kasi';
+        }
+
+        if ($this->status === 'disetujui_kasi' || ($this->status === 'diajukan' && $this->posisi?->role === 'kabid')) {
+            return 'Menunggu pemeriksaan Kabid';
+        }
+
+        if ($this->status === 'ditandatangani') {
+            return 'Menunggu finalisasi dokumen';
+        }
+
+        return $this->status_label;
+    }
 }
