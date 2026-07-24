@@ -465,7 +465,7 @@
     /* Flatpickr Custom Styling */
     .flatpickr-calendar {
         background: white !important;
-        border-radius: 12px !important;
+        border-radius: 8px !important;
         box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important;
         border: none !important;
         padding: 8px !important;

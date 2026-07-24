@@ -7,11 +7,27 @@
     <title>Verifikasi Dokumen E-Surat</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,600;6..72,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --ink: #102033;
+            --muted: #647083;
+            --paper: #fbfaf6;
+            --paper-soft: #f3f0e8;
+            --line: #d9ded6;
+            --forest: #0f766e;
+            --forest-deep: #0b4f49;
+            --blueprint: #1d4d7a;
+            --clay: #b85c38;
+            --gold: #d8a030;
+        }
+
         body {
-            background: #eef3f7;
-            color: #0f172a;
-            font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background:
+                linear-gradient(90deg, rgba(16, 32, 51, .04) 1px, transparent 1px) 0 0 / 34px 34px,
+                linear-gradient(180deg, #fbfaf6 0%, #eef4ef 100%);
+            color: var(--ink);
+            font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
             min-height: 100vh;
         }
 
@@ -30,6 +46,7 @@
         }
 
         .verify-title {
+            font-family: 'Newsreader', Georgia, serif;
             font-size: clamp(1.55rem, 4vw, 2.4rem);
             font-weight: 850;
             letter-spacing: 0;
@@ -37,21 +54,22 @@
         }
 
         .verify-subtitle {
-            color: #526173;
+            color: var(--muted);
             margin: 8px 0 0;
             max-width: 660px;
         }
 
         .verify-card {
-            background: #fff;
-            border: 1px solid #d9e2ec;
+            background: rgba(255, 255, 255, .92);
+            border: 1px solid var(--line);
             border-radius: 8px;
-            box-shadow: 0 18px 38px rgba(15, 23, 42, .07);
+            box-shadow: 0 18px 38px rgba(16, 32, 51, .08);
+            overflow: hidden;
         }
 
         .verify-card-header {
-            background: #f8fafc;
-            border-bottom: 1px solid #e5edf5;
+            background: linear-gradient(180deg, #fffdf8 0%, #f5f2ea 100%);
+            border-bottom: 1px solid var(--line);
             padding: 18px 20px;
         }
 
@@ -91,7 +109,7 @@
         }
 
         .detail-item {
-            border-bottom: 1px solid #edf2f7;
+            border-bottom: 1px solid #e7ebe4;
             min-height: 82px;
             padding: 14px 0;
         }
@@ -101,7 +119,7 @@
         }
 
         .detail-item:nth-child(even) {
-            border-left: 1px solid #edf2f7;
+            border-left: 1px solid #e7ebe4;
             padding-left: 16px;
         }
 
@@ -123,12 +141,29 @@
         }
 
         .helper-box {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
+            background: #f8f5ee;
+            border: 1px solid var(--line);
             border-radius: 8px;
             color: #475569;
             font-size: .9rem;
             padding: 14px;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--forest) 0%, var(--forest-deep) 100%);
+            border-color: var(--forest);
+            font-weight: 800;
+        }
+
+        .form-control {
+            background: #fffdf8;
+            border-color: #cfd8d1;
+            border-radius: 8px;
+        }
+
+        .form-control:focus {
+            border-color: var(--forest);
+            box-shadow: 0 0 0 .22rem rgba(15, 118, 110, .14);
         }
 
         @media (max-width: 768px) {

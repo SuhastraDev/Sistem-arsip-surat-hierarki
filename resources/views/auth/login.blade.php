@@ -8,9 +8,22 @@
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,600;6..72,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <style>
+        :root {
+            --ink: #102033;
+            --muted: #647083;
+            --paper: #fbfaf6;
+            --paper-soft: #f3f0e8;
+            --line: #d9ded6;
+            --forest: #0f766e;
+            --forest-deep: #0b4f49;
+            --blueprint: #1d4d7a;
+            --clay: #b85c38;
+            --gold: #d8a030;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -18,7 +31,11 @@
         }
 
         body {
-            font-family: 'Inter', sans-serif;
+            background:
+                linear-gradient(90deg, rgba(16, 32, 51, .04) 1px, transparent 1px) 0 0 / 34px 34px,
+                linear-gradient(180deg, #fbfaf6 0%, #eef4ef 100%);
+            color: var(--ink);
+            font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
             min-height: 100vh;
             overflow-x: hidden;
             overflow-y: auto;
@@ -32,7 +49,9 @@
         /* Left Side - Branding */
         .left-panel {
             flex: 1;
-            background: linear-gradient(135deg, #004085 0%, #002752 100%);
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, .07) 0 1px, transparent 1px) 0 0 / 100% 42px,
+                linear-gradient(135deg, #102033 0%, #0b4f49 100%);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -46,23 +65,25 @@
         .left-panel::before {
             content: '';
             position: absolute;
-            width: 500px;
-            height: 500px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            top: -200px;
-            right: -200px;
+            width: 72%;
+            height: 76%;
+            background:
+                linear-gradient(90deg, rgba(216, 160, 48, .52) 0 7px, transparent 7px 100%),
+                repeating-linear-gradient(180deg, rgba(255, 255, 255, .12) 0 42px, rgba(255, 255, 255, .03) 42px 44px);
+            border: 1px solid rgba(255, 255, 255, .16);
+            right: -28%;
+            top: 12%;
+            transform: rotate(-4deg);
         }
 
         .left-panel::after {
             content: '';
             position: absolute;
-            width: 300px;
-            height: 300px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 50%;
-            bottom: -100px;
-            left: -100px;
+            background: rgba(216, 160, 48, .9);
+            bottom: 0;
+            height: 5px;
+            left: 60px;
+            width: 150px;
         }
 
         .brand-content {
@@ -74,8 +95,8 @@
         .brand-logo {
             width: 120px;
             height: 120px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 24px;
+            background: rgba(216, 160, 48, 0.18);
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -93,7 +114,8 @@
             font-size: 2.5rem;
             font-weight: 700;
             margin-bottom: 15px;
-            letter-spacing: -1px;
+            font-family: 'Newsreader', Georgia, serif;
+            letter-spacing: 0;
         }
 
         .brand-subtitle {
@@ -129,7 +151,7 @@
         /* Right Side - Login Form */
         .right-panel {
             flex: 1;
-            background: white;
+            background: rgba(255, 253, 248, .86);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -139,6 +161,22 @@
         .login-form-wrapper {
             width: 100%;
             max-width: 450px;
+            background: rgba(255, 255, 255, .88);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            box-shadow: 0 22px 54px rgba(16, 32, 51, .12);
+            padding: 28px;
+            position: relative;
+        }
+
+        .login-form-wrapper::before {
+            background: var(--clay);
+            content: "";
+            height: 64px;
+            left: -1px;
+            position: absolute;
+            top: 28px;
+            width: 5px;
         }
 
         .login-header {
@@ -146,14 +184,15 @@
         }
 
         .login-header h2 {
+            font-family: 'Newsreader', Georgia, serif;
             font-size: 2rem;
             font-weight: 700;
-            color: #1a202c;
+            color: var(--ink);
             margin-bottom: 10px;
         }
 
         .login-header p {
-            color: #718096;
+            color: var(--muted);
             font-size: 0.95rem;
         }
 
@@ -163,7 +202,7 @@
 
         .form-label {
             font-weight: 600;
-            color: #4a5568;
+            color: #334155;
             margin-bottom: 10px;
             font-size: 0.9rem;
             display: block;
@@ -178,25 +217,25 @@
             left: 18px;
             top: 50%;
             transform: translateY(-50%);
-            color: #a0aec0;
+            color: var(--forest);
             font-size: 1.1rem;
         }
 
         .form-control {
             width: 100%;
             padding: 16px 18px 16px 50px;
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
+            border: 1px solid #cfd8d1;
+            border-radius: 8px;
             font-size: 1rem;
             transition: all 0.3s;
-            background: #f7fafc;
+            background: #fffdf8;
         }
 
         .form-control:focus {
             outline: none;
-            border-color: #004085;
+            border-color: var(--forest);
             background: white;
-            box-shadow: 0 0 0 4px rgba(0, 64, 133, 0.1);
+            box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.12);
         }
 
         .form-control::placeholder {
@@ -206,9 +245,9 @@
         .btn-login {
             width: 100%;
             padding: 16px;
-            background: linear-gradient(135deg, #004085 0%, #002752 100%);
+            background: linear-gradient(135deg, var(--forest) 0%, var(--forest-deep) 100%);
             border: none;
-            border-radius: 12px;
+            border-radius: 8px;
             color: white;
             font-weight: 600;
             font-size: 1rem;
@@ -219,15 +258,15 @@
 
         .btn-login:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(0, 64, 133, 0.3);
+            box-shadow: 0 10px 25px rgba(15, 118, 110, 0.26);
         }
 
         .demo-accounts {
             margin-top: 22px;
             padding: 16px;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 14px;
+            background: #f8f5ee;
+            border: 1px solid var(--line);
+            border-radius: 8px;
         }
 
         .demo-header {
@@ -242,7 +281,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            color: #1a202c;
+            color: var(--ink);
             font-size: 0.92rem;
             font-weight: 700;
         }
@@ -260,9 +299,10 @@
         }
 
         .demo-account {
-            border: 1px solid #dbe4f0;
-            border-radius: 10px;
-            background: white;
+            border: 1px solid #d6ded6;
+            border-left: 4px solid var(--gold);
+            border-radius: 8px;
+            background: #fffdf8;
             padding: 10px;
             text-align: left;
             cursor: pointer;
@@ -270,7 +310,7 @@
         }
 
         .demo-account:hover {
-            border-color: #004085;
+            border-color: var(--forest);
             box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
             transform: translateY(-1px);
         }
@@ -286,7 +326,7 @@
         }
 
         .demo-role i {
-            color: #004085;
+            color: var(--forest);
             font-size: 0.85rem;
         }
 

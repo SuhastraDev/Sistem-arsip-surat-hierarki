@@ -8,9 +8,24 @@
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,600;6..72,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23004085'/><path d='M35 25h20l10 10v40h-30z' fill='white'/><path d='M55 25v10h10' fill='none' stroke='white' stroke-width='2'/></svg>">
 
     <style>
+        :root {
+            --ink: #102033;
+            --muted: #647083;
+            --paper: #fbfaf6;
+            --paper-soft: #f3f0e8;
+            --line: #d9ded6;
+            --forest: #0f766e;
+            --forest-deep: #0b4f49;
+            --blueprint: #1d4d7a;
+            --clay: #b85c38;
+            --gold: #d8a030;
+            --shadow-soft: 0 14px 32px rgba(16, 32, 51, .08);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -18,15 +33,192 @@
         }
 
         body {
-            background-color: #f7fafc;
-            font-family: 'Inter', sans-serif;
+            background:
+                linear-gradient(90deg, rgba(16, 32, 51, .035) 1px, transparent 1px) 0 0 / 34px 34px,
+                linear-gradient(180deg, #fbfaf6 0%, #eef4ef 100%);
+            color: var(--ink);
+            font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
             overflow-x: hidden;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        .navbar-title h5 {
+            color: var(--ink);
+            font-family: 'Newsreader', Georgia, serif;
+            font-weight: 700;
+            letter-spacing: 0;
+        }
+
+        a {
+            color: var(--blueprint);
+        }
+
+        .card,
+        .alert,
+        .modal-content,
+        .dropdown-menu,
+        .form-control,
+        .form-select,
+        .btn,
+        .badge {
+            border-radius: 8px;
+        }
+
+        .card,
+        .request-overview,
+        .filter-panel,
+        .queue-panel,
+        .detail-panel,
+        .form-panel,
+        .process-strip,
+        .workbench-hero,
+        .input-panel,
+        .list-panel {
+            background: rgba(255, 255, 255, .92) !important;
+            border: 1px solid var(--line) !important;
+            box-shadow: var(--shadow-soft) !important;
+        }
+
+        .card-header,
+        .queue-panel-header,
+        .detail-panel-header,
+        .list-panel-header,
+        .requirement-panel-header {
+            background: linear-gradient(180deg, #fffdf8 0%, #f5f2ea 100%) !important;
+            border-color: var(--line) !important;
+        }
+
+        .btn {
+            font-weight: 700;
+            letter-spacing: 0;
+        }
+
+        .btn-primary,
+        .btn-success {
+            background: linear-gradient(135deg, var(--forest) 0%, var(--forest-deep) 100%);
+            border-color: var(--forest);
+            box-shadow: 0 8px 18px rgba(15, 118, 110, .18);
+        }
+
+        .btn-primary:hover,
+        .btn-success:hover {
+            background: linear-gradient(135deg, #14877e 0%, #0d5c55 100%);
+            border-color: #14877e;
+            transform: translateY(-1px);
+        }
+
+        .btn-outline-primary {
+            border-color: rgba(29, 77, 122, .35);
+            color: var(--blueprint);
+        }
+
+        .btn-outline-primary:hover {
+            background: var(--blueprint);
+            border-color: var(--blueprint);
+        }
+
+        .form-control,
+        .form-select {
+            background-color: #fffdf8;
+            border-color: #cfd8d1;
+            color: var(--ink);
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            border-color: var(--forest);
+            box-shadow: 0 0 0 .22rem rgba(15, 118, 110, .14);
+        }
+
+        .form-label,
+        .field-label {
+            color: #334155;
+            font-size: .82rem;
+            font-weight: 800;
+        }
+
+        .table {
+            color: var(--ink);
+        }
+
+        .table thead th {
+            background: #eef2ec !important;
+            border-bottom: 1px solid var(--line);
+            color: #334155;
+            font-size: .74rem;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+        }
+
+        .table tbody tr {
+            transition: background .18s ease;
+        }
+
+        .table tbody tr:hover {
+            background: #fffdf8;
+        }
+
+        .badge.bg-primary,
+        .badge.bg-success {
+            background: var(--forest) !important;
+        }
+
+        .badge.bg-secondary {
+            background: #647083 !important;
+        }
+
+        [style*="#004085"],
+        [style*="#002752"],
+        [style*="#0056b3"],
+        [style*="#003266"] {
+            background: linear-gradient(135deg, var(--forest) 0%, var(--forest-deep) 100%) !important;
+        }
+
+        [style*="background: #004085"],
+        [style*="border-color: #004085"],
+        [style*="border: 2px solid #004085"],
+        [style*="border-left: 3px solid #004085"] {
+            background-color: var(--forest) !important;
+            border-color: var(--forest) !important;
+        }
+
+        [style*="#dc3545"],
+        [style*="#b02a37"] {
+            background: linear-gradient(135deg, var(--clay) 0%, #823f2a 100%) !important;
+        }
+
+        [style*="#fff9e6"],
+        [style*="#fff5f5"],
+        [style*="#e8f5e9"],
+        [style*="#e8f4fd"],
+        [style*="#e7f3ff"],
+        [style*="#f8f9fa"] {
+            background-color: #fffdf8 !important;
+        }
+
+        [style*="border-left: 3px"] {
+            border-left-width: 5px !important;
+            border-left-color: var(--gold) !important;
+        }
+
+        .section-kicker {
+            color: var(--clay) !important;
+            font-size: .72rem;
+            font-weight: 900;
+            letter-spacing: .12em;
+            text-transform: uppercase;
         }
 
         /* SIDEBAR */
         .sidebar {
             min-height: 100vh;
-            background: linear-gradient(180deg, #004085 0%, #002752 100%);
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, .06) 0 1px, transparent 1px) 0 0 / 100% 38px,
+                linear-gradient(180deg, #102033 0%, #0b4f49 100%);
             color: white;
             box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
             position: fixed;
@@ -43,13 +235,25 @@
             display: flex;
             align-items: center;
             gap: 12px;
+            position: relative;
+        }
+
+        .sidebar .brand::after {
+            background: var(--gold);
+            bottom: -1px;
+            content: "";
+            height: 3px;
+            left: 25px;
+            position: absolute;
+            width: 72px;
         }
 
         .sidebar .brand-icon {
             width: 45px;
             height: 45px;
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 12px;
+            background: rgba(216, 160, 48, 0.22);
+            border: 1px solid rgba(216, 160, 48, .4);
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -63,7 +267,7 @@
         .sidebar .brand-title {
             font-size: 1.3rem;
             font-weight: 700;
-            letter-spacing: 0.5px;
+            letter-spacing: 0;
             margin: 0;
         }
 
@@ -99,9 +303,11 @@
 
         .nav-link {
             color: rgba(255, 255, 255, 0.75);
-            padding: 13px 25px;
+            margin: 2px 14px;
+            padding: 12px 11px;
             font-size: 0.95rem;
-            border-left: 3px solid transparent;
+            border: 1px solid transparent;
+            border-radius: 8px;
             transition: all 0.2s ease;
             position: relative;
             display: flex;
@@ -112,13 +318,13 @@
         .nav-link:hover {
             color: #fff;
             background-color: rgba(255, 255, 255, 0.08);
-            border-left-color: #00d2ff;
+            border-color: rgba(216, 160, 48, .28);
         }
 
         .nav-link.active {
             color: #fff;
-            background-color: rgba(255, 255, 255, 0.15);
-            border-left-color: #00d2ff;
+            background: rgba(255, 255, 255, 0.14);
+            border-color: rgba(216, 160, 48, .45);
             font-weight: 600;
         }
 
@@ -133,7 +339,7 @@
         .nav-badge {
             margin-left: auto;
             padding: 3px 9px;
-            border-radius: 12px;
+            border-radius: 8px;
             font-size: 0.7rem;
             font-weight: 700;
         }
@@ -153,7 +359,7 @@
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
             color: white;
-            border-radius: 10px;
+            border-radius: 8px;
             font-weight: 600;
             transition: all 0.3s;
         }
@@ -173,9 +379,11 @@
 
         /* TOP NAVBAR */
         .top-navbar {
-            background: white;
+            background: rgba(255, 253, 248, .92);
+            border-bottom: 1px solid var(--line);
+            backdrop-filter: blur(16px);
             padding: 20px 40px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 10px 24px rgba(16, 32, 51, .05);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -186,8 +394,6 @@
 
         .navbar-title h5 {
             margin: 0;
-            font-weight: 700;
-            color: #1a202c;
             font-size: 1.4rem;
         }
 
@@ -204,7 +410,7 @@
             gap: 15px;
             cursor: pointer;
             padding: 8px 15px;
-            border-radius: 12px;
+            border-radius: 8px;
             transition: all 0.2s;
         }
 
@@ -234,9 +440,9 @@
         .user-avatar {
             width: 45px;
             height: 45px;
-            background: linear-gradient(135deg, #004085 0%, #002752 100%);
+            background: linear-gradient(135deg, var(--forest) 0%, var(--blueprint) 100%);
             color: white;
-            border-radius: 12px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -248,7 +454,7 @@
         .dropdown-menu {
             border: none;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            border-radius: 12px;
+            border-radius: 8px;
             padding: 8px;
             margin-top: 10px;
         }
@@ -271,6 +477,20 @@
         /* PAGE CONTENT */
         .page-content {
             padding: 30px 40px;
+        }
+
+        .page-content::before {
+            color: rgba(184, 92, 56, .18);
+            content: "E-SURAT";
+            font-family: 'Newsreader', Georgia, serif;
+            font-size: clamp(3rem, 12vw, 8rem);
+            font-weight: 700;
+            line-height: 1;
+            pointer-events: none;
+            position: fixed;
+            right: 28px;
+            top: 96px;
+            z-index: -1;
         }
 
         /* RESPONSIVE */
@@ -497,6 +717,32 @@
         <div class="page-content">
             @yield('content')
         </div>
+        <style>
+            .page-content [style*="#004085"],
+            .page-content [style*="#002752"],
+            .page-content [style*="#0056b3"],
+            .page-content [style*="#003266"],
+            .page-content .btn-primary,
+            .page-content .btn-success {
+                background: linear-gradient(135deg, var(--forest) 0%, var(--forest-deep) 100%) !important;
+                border-color: var(--forest) !important;
+            }
+
+            .page-content [style*="border-color: #004085"],
+            .page-content [style*="border: 2px solid #004085"],
+            .page-content [style*="border-left: 3px solid #004085"] {
+                border-color: var(--forest) !important;
+            }
+
+            .page-content .card,
+            .page-content .modal-content,
+            .page-content .form-control,
+            .page-content .form-select,
+            .page-content .btn,
+            .page-content .alert {
+                border-radius: 8px !important;
+            }
+        </style>
 
     </div>
 
