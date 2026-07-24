@@ -88,8 +88,8 @@ class PengajuanSuratController extends Controller
             'metadata' => [
                 'fase' => 'fase_2',
                 'form_data' => $cleanFields,
-                'template_format' => ['html', 'pdf', 'docx'],
-                'catatan' => 'Form persyaratan dan template awal HTML/PDF/DOCX sudah tersedia pada Fase 2.',
+                'template_format' => ['pdf', 'docx'],
+                'catatan' => 'Form persyaratan dan preview dokumen sudah tersedia. Output unduhan disediakan dalam PDF dan DOCX.',
             ],
         ]);
 
@@ -132,7 +132,6 @@ class PengajuanSuratController extends Controller
         $this->authorizeView($pengajuanSurat);
 
         return match ($format) {
-            'html' => $this->templateService->downloadHtml($pengajuanSurat),
             'pdf' => $this->templateService->downloadPdf($pengajuanSurat),
             'docx' => $this->templateService->downloadDocx($pengajuanSurat),
             default => abort(404),

@@ -103,15 +103,12 @@ $currentIndex = $currentIndex === false ? 0 : $currentIndex;
             <div class="detail-panel-header d-flex flex-column flex-md-row justify-content-between gap-3">
                 <div>
                     <strong><i class="fas fa-file-contract me-2 text-primary"></i>Data Persyaratan</strong>
-                    <div class="small text-muted mt-1">Data ini menjadi isi template HTML/PDF/DOCX.</div>
+                    <div class="small text-muted mt-1">Buka preview dokumen dulu, lalu unduh PDF atau DOCX dari halaman preview.</div>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
                     <a href="{{ route('pengajuan-surat.preview', $pengajuanSurat) }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-eye me-1"></i>Preview
+                        <i class="fas fa-eye me-1"></i>Lihat Dokumen
                     </a>
-                    <a href="{{ route('pengajuan-surat.export', [$pengajuanSurat, 'html']) }}" class="btn btn-sm btn-light border">HTML</a>
-                    <a href="{{ route('pengajuan-surat.export', [$pengajuanSurat, 'pdf']) }}" class="btn btn-sm btn-light border">PDF</a>
-                    <a href="{{ route('pengajuan-surat.export', [$pengajuanSurat, 'docx']) }}" class="btn btn-sm btn-light border">DOCX</a>
                 </div>
             </div>
             <div class="requirement-summary">

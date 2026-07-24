@@ -108,21 +108,44 @@
         }
 
         .toolbar {
+            align-items: center;
             display: flex;
+            flex-wrap: wrap;
             gap: 8px;
-            justify-content: center;
+            justify-content: space-between;
             margin: 0 auto 18px;
             max-width: 794px;
         }
 
+        .toolbar-title {
+            color: #334155;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .toolbar-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .toolbar a,
         .toolbar button {
             background: #0f766e;
             border: 0;
             border-radius: 7px;
             color: #fff;
             cursor: pointer;
+            display: inline-flex;
             font-weight: 700;
             padding: 10px 14px;
+            text-decoration: none;
+        }
+
+        .toolbar .secondary {
+            background: #fff;
+            border: 1px solid #cbd5e1;
+            color: #334155;
         }
 
         @media print {
@@ -149,7 +172,13 @@
 <body>
     @unless($isPrint)
     <div class="toolbar">
-        <button onclick="window.print()">Cetak / simpan PDF</button>
+        <div class="toolbar-title">Preview dokumen sebelum diunduh</div>
+        <div class="toolbar-actions">
+            <a href="{{ route('pengajuan-surat.show', $pengajuanSurat) }}" class="secondary">Kembali</a>
+            <a href="{{ route('pengajuan-surat.export', [$pengajuanSurat, 'pdf']) }}">Download PDF</a>
+            <a href="{{ route('pengajuan-surat.export', [$pengajuanSurat, 'docx']) }}">Download DOCX</a>
+            <button type="button" class="secondary" onclick="window.print()">Cetak dari browser</button>
+        </div>
     </div>
     @endunless
 

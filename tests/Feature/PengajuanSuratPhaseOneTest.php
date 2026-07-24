@@ -102,11 +102,9 @@ class PengajuanSuratPhaseOneTest extends TestCase
         $this->get(route('pengajuan-surat.preview', $pengajuan))
             ->assertOk()
             ->assertSee('Nota Dinas')
-            ->assertSee('Koordinasi internal');
-
-        $this->get(route('pengajuan-surat.export', [$pengajuan, 'html']))
-            ->assertOk()
-            ->assertHeader('Content-Type', 'text/html; charset=UTF-8');
+            ->assertSee('Koordinasi internal')
+            ->assertSee('Download PDF')
+            ->assertSee('Download DOCX');
 
         $this->get(route('pengajuan-surat.export', [$pengajuan, 'pdf']))
             ->assertOk()

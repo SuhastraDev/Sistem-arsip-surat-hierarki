@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\PengajuanSurat;
 use Illuminate\Http\Response;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
 use ZipArchive;
 
@@ -105,20 +104,6 @@ class SuratTemplateService
             ])
             ->values()
             ->all();
-    }
-
-    public function downloadHtml(PengajuanSurat $pengajuanSurat): Response
-    {
-        $html = View::make('pengajuan-surat.template', [
-            'pengajuanSurat' => $pengajuanSurat,
-            'rows' => $this->templateRows($pengajuanSurat),
-            'isPrint' => true,
-        ])->render();
-
-        return response($html, 200, [
-            'Content-Type' => 'text/html; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="'.$this->fileName($pengajuanSurat, 'html').'"',
-        ]);
     }
 
     public function downloadPdf(PengajuanSurat $pengajuanSurat): Response
