@@ -99,6 +99,31 @@ $currentIndex = $currentIndex === false ? 0 : $currentIndex;
             </div>
         </div>
 
+        <div class="detail-panel mb-3">
+            <div class="detail-panel-header d-flex flex-column flex-md-row justify-content-between gap-3">
+                <div>
+                    <strong><i class="fas fa-file-contract me-2 text-primary"></i>Data Persyaratan</strong>
+                    <div class="small text-muted mt-1">Data ini menjadi isi template HTML/PDF/DOCX.</div>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{{ route('pengajuan-surat.preview', $pengajuanSurat) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-eye me-1"></i>Preview
+                    </a>
+                    <a href="{{ route('pengajuan-surat.export', [$pengajuanSurat, 'html']) }}" class="btn btn-sm btn-light border">HTML</a>
+                    <a href="{{ route('pengajuan-surat.export', [$pengajuanSurat, 'pdf']) }}" class="btn btn-sm btn-light border">PDF</a>
+                    <a href="{{ route('pengajuan-surat.export', [$pengajuanSurat, 'docx']) }}" class="btn btn-sm btn-light border">DOCX</a>
+                </div>
+            </div>
+            <div class="requirement-summary">
+                @foreach($templateRows as $row)
+                <div class="requirement-row">
+                    <span>{{ $row['label'] }}</span>
+                    <strong>{{ $row['value'] }}</strong>
+                </div>
+                @endforeach
+            </div>
+        </div>
+
         <div class="detail-panel">
             <div class="detail-panel-header">
                 <strong><i class="fas fa-route me-2 text-primary"></i>Roadmap Pengajuan</strong>
@@ -202,6 +227,39 @@ $currentIndex = $currentIndex === false ? 0 : $currentIndex;
         gap: 7px;
         padding: 5px 10px;
         white-space: nowrap;
+    }
+
+    .requirement-summary {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .requirement-row {
+        border-bottom: 1px solid #edf2f7;
+        border-right: 1px solid #edf2f7;
+        min-height: 82px;
+        padding: 14px 16px;
+    }
+
+    .requirement-row:nth-child(2n) {
+        border-right: 0;
+    }
+
+    .requirement-row span {
+        color: #64748b;
+        display: block;
+        font-size: .74rem;
+        font-weight: 800;
+        letter-spacing: .04em;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+    }
+
+    .requirement-row strong {
+        color: #0f172a;
+        font-size: .92rem;
+        font-weight: 700;
+        white-space: pre-line;
     }
 
     .approval-roadmap {
@@ -325,6 +383,14 @@ $currentIndex = $currentIndex === false ? 0 : $currentIndex;
     }
 
     @media (max-width: 576px) {
+        .requirement-summary {
+            grid-template-columns: 1fr;
+        }
+
+        .requirement-row {
+            border-right: 0;
+        }
+
         .roadmap-item {
             grid-template-columns: 34px 1fr;
         }

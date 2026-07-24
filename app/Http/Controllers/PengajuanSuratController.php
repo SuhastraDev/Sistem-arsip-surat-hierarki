@@ -5,11 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\JenisSurat;
 use App\Models\PengajuanSurat;
 use App\Models\User;
+use App\Services\SuratTemplateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class PengajuanSuratController extends Controller
 {
+    public function __construct(private readonly SuratTemplateService $templateService) {}
+
     public function index(Request $request)
     {
         $user = Auth::user();
@@ -50,18 +53,22 @@ class PengajuanSuratController extends Controller
     public function create()
     {
         $jenisSurats = JenisSurat::aktif()->orderBy('nama')->get();
+        $templateDefinitions = $this->templateService->definitions();
 
-        return view('pengajuan-surat.create', compact('jenisSurats'));
+        return view('pengajuan-surat.create', compact('jenisSurats', 'templateDefinitions'));
     }
 
     public function store(Request $request)
     {
-        $data = $request->validate([
+        $baseData = $request->validate([
             'jenis_surat_id' => ['required', 'exists:jenis_surats,id'],
             'tanggal_pengajuan' => ['required', 'date'],
             'perihal' => ['required', 'string', 'max:1000'],
         ]);
 
+        $jenisSurat = JenisSurat::findOrFail($baseData['jenis_surat_id']);
+        $fieldData = $request->validate($this->templateService->validationRules($jenisSurat->slug));
+        $cleanFields = $this->templateService->cleanFields($jenisSurat->slug, $fieldData['fields'] ?? []);
         $posisiAwal = $this->resolvePosisiAwal();
 
         if (! $posisiAwal) {
@@ -71,16 +78,18 @@ class PengajuanSuratController extends Controller
         }
 
         PengajuanSurat::create([
-            'jenis_surat_id' => $data['jenis_surat_id'],
+            'jenis_surat_id' => $baseData['jenis_surat_id'],
             'pemohon_id' => Auth::id(),
             'nomor_pengajuan' => $this->generateNomorPengajuan(),
-            'tanggal_pengajuan' => $data['tanggal_pengajuan'],
-            'perihal' => $data['perihal'],
+            'tanggal_pengajuan' => $baseData['tanggal_pengajuan'],
+            'perihal' => $baseData['perihal'],
             'status' => 'diajukan',
             'posisi_saat_ini' => $posisiAwal->id,
             'metadata' => [
-                'fase' => 'fase_1',
-                'catatan' => 'Struktur awal pengajuan. Form persyaratan detail dibuat pada Fase 2.',
+                'fase' => 'fase_2',
+                'form_data' => $cleanFields,
+                'template_format' => ['html', 'pdf', 'docx'],
+                'catatan' => 'Form persyaratan dan template awal HTML/PDF/DOCX sudah tersedia pada Fase 2.',
             ],
         ]);
 
@@ -100,7 +109,44 @@ class PengajuanSuratController extends Controller
 
         abort_unless($isAllowed, 403);
 
-        return view('pengajuan-surat.show', compact('pengajuanSurat'));
+        $templateRows = $this->templateService->templateRows($pengajuanSurat);
+
+        return view('pengajuan-surat.show', compact('pengajuanSurat', 'templateRows'));
+    }
+
+    public function preview(PengajuanSurat $pengajuanSurat)
+    {
+        $pengajuanSurat->load(['jenisSurat', 'pemohon', 'posisi']);
+        $this->authorizeView($pengajuanSurat);
+
+        return view('pengajuan-surat.template', [
+            'pengajuanSurat' => $pengajuanSurat,
+            'rows' => $this->templateService->templateRows($pengajuanSurat),
+            'isPrint' => false,
+        ]);
+    }
+
+    public function export(PengajuanSurat $pengajuanSurat, string $format)
+    {
+        $pengajuanSurat->load(['jenisSurat', 'pemohon', 'posisi']);
+        $this->authorizeView($pengajuanSurat);
+
+        return match ($format) {
+            'html' => $this->templateService->downloadHtml($pengajuanSurat),
+            'pdf' => $this->templateService->downloadPdf($pengajuanSurat),
+            'docx' => $this->templateService->downloadDocx($pengajuanSurat),
+            default => abort(404),
+        };
+    }
+
+    private function authorizeView(PengajuanSurat $pengajuanSurat): void
+    {
+        $user = Auth::user();
+        $isAllowed = $user->role === 'admin'
+            || $pengajuanSurat->pemohon_id === $user->id
+            || $pengajuanSurat->posisi_saat_ini === $user->id;
+
+        abort_unless($isAllowed, 403);
     }
 
     private function resolvePosisiAwal(): ?User

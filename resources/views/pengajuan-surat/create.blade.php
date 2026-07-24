@@ -8,7 +8,7 @@
         <div class="request-overview mb-4">
             <div class="section-kicker">Pengajuan Baru</div>
             <h4 class="mb-1 fw-bold text-dark">Buat Pengajuan Surat</h4>
-            <p class="text-muted mb-0">Pilih jenis surat dan tulis kebutuhan awal. Persyaratan rinci akan dibuat pada Fase 2.</p>
+            <p class="text-muted mb-0">Pilih jenis surat, lengkapi persyaratan, lalu sistem menyiapkan template awal.</p>
         </div>
 
         <div class="process-strip mb-4">
@@ -22,7 +22,7 @@
             </div>
             <div class="process-step">
                 <span>3</span>
-                <strong>Lanjut fase berikutnya</strong>
+                <strong>Preview template</strong>
             </div>
         </div>
 
@@ -54,12 +54,12 @@
                         <select name="jenis_surat_id" class="form-select form-select-lg" required>
                             <option value="" selected disabled>-- Pilih Jenis Surat --</option>
                             @foreach($jenisSurats as $jenisSurat)
-                            <option value="{{ $jenisSurat->id }}" {{ old('jenis_surat_id') == $jenisSurat->id ? 'selected' : '' }}>
+                            <option value="{{ $jenisSurat->id }}" data-slug="{{ $jenisSurat->slug }}" {{ old('jenis_surat_id') == $jenisSurat->id ? 'selected' : '' }}>
                                 {{ $jenisSurat->nama }}
                             </option>
                             @endforeach
                         </select>
-                        <div class="form-text">Pilihan awal: Surat Cuti, Surat Tugas, dan Nota Dinas.</div>
+                        <div class="form-text">Field persyaratan akan menyesuaikan jenis surat yang dipilih.</div>
                     </div>
 
                     <div class="mb-4">
@@ -70,6 +70,14 @@
                     <div class="mb-4">
                         <label class="form-label fw-semibold">Perihal</label>
                         <textarea name="perihal" class="form-control" rows="5" maxlength="1000" placeholder="Tuliskan ringkasan kebutuhan surat..." required>{{ old('perihal') }}</textarea>
+                    </div>
+
+                    <div class="requirement-panel mb-4" id="requirementPanel">
+                        <div class="requirement-panel-empty">
+                            <i class="fas fa-list-check"></i>
+                            <strong>Pilih jenis surat</strong>
+                            <span>Persyaratan khusus akan muncul di sini.</span>
+                        </div>
                     </div>
 
                     <div class="d-flex justify-content-between gap-3">
@@ -85,6 +93,93 @@
         </div>
     </div>
 </div>
+@php
+$oldFields = old('fields', []);
+@endphp
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const definitions = @json($templateDefinitions);
+        const oldFields = @json($oldFields);
+        const select = document.querySelector('select[name="jenis_surat_id"]');
+        const panel = document.getElementById('requirementPanel');
+
+        function escapeHtml(value) {
+            return String(value || '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        function renderFields() {
+            const selected = select.options[select.selectedIndex];
+            const slug = selected ? selected.dataset.slug : null;
+            const definition = slug ? definitions[slug] : null;
+
+            if (!definition) {
+                panel.innerHTML = `
+                    <div class="requirement-panel-empty">
+                        <i class="fas fa-list-check"></i>
+                        <strong>Pilih jenis surat</strong>
+                        <span>Persyaratan khusus akan muncul di sini.</span>
+                    </div>`;
+                return;
+            }
+
+            const fields = Object.entries(definition.fields).map(([name, field]) => {
+                const required = field.required ? 'required' : '';
+                const requiredMark = field.required ? '<span class="text-danger">*</span>' : '';
+                const value = escapeHtml(oldFields[name] || '');
+                const placeholder = escapeHtml(field.placeholder || '');
+
+                if (field.type === 'textarea') {
+                    return `
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">${field.label} ${requiredMark}</label>
+                            <textarea name="fields[${name}]" class="form-control" rows="3" placeholder="${placeholder}" ${required}>${value}</textarea>
+                        </div>`;
+                }
+
+                if (field.type === 'select') {
+                    const options = (field.options || []).map(option => {
+                        const safeOption = escapeHtml(option);
+                        const selected = value === safeOption ? 'selected' : '';
+                        return `<option value="${safeOption}" ${selected}>${safeOption}</option>`;
+                    }).join('');
+
+                    return `
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">${field.label} ${requiredMark}</label>
+                            <select name="fields[${name}]" class="form-select" ${required}>
+                                <option value="">-- Pilih --</option>
+                                ${options}
+                            </select>
+                        </div>`;
+                }
+
+                return `
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">${field.label} ${requiredMark}</label>
+                        <input type="${field.type}" name="fields[${name}]" class="form-control" value="${value}" placeholder="${placeholder}" ${required}>
+                    </div>`;
+            }).join('');
+
+            panel.innerHTML = `
+                <div class="requirement-panel-header">
+                    <div>
+                        <div class="section-kicker">${definition.title}</div>
+                        <h6 class="fw-bold mb-1">Persyaratan surat</h6>
+                        <p class="text-muted small mb-0">${definition.summary}</p>
+                    </div>
+                </div>
+                <div class="row g-3 p-3">${fields}</div>`;
+        }
+
+        select.addEventListener('change', renderFields);
+        renderFields();
+    });
+</script>
 <style>
     .section-kicker {
         color: #0f766e;
@@ -146,6 +241,35 @@
         background: #0f766e;
         color: #fff;
         padding: 16px 18px;
+    }
+
+    .requirement-panel {
+        background: #f8fafc;
+        border: 1px solid #dfe7ef;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .requirement-panel-header {
+        background: #fff;
+        border-bottom: 1px solid #e7edf3;
+        padding: 16px 18px;
+    }
+
+    .requirement-panel-empty {
+        align-items: center;
+        color: #64748b;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 34px 20px;
+        text-align: center;
+    }
+
+    .requirement-panel-empty i {
+        color: #0f766e;
+        font-size: 2rem;
+        opacity: .8;
     }
 
     @media (max-width: 768px) {
