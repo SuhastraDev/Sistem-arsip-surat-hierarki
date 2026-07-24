@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
         // Panggil seeder yang kita buat tadi
         $this->call([
             UserSeeder::class,
+            JenisSuratSeeder::class,
         ]);
     }
 }

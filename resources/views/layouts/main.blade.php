@@ -375,18 +375,11 @@
                 <span>Dashboard</span>
             </a>
 
-            @if(in_array(Auth::user()->role, ['admin']))
-            <div class="menu-label">Data & Arsip</div>
-            <a href="{{ route('surat-masuk.index') }}" class="nav-link {{ request()->is('surat-masuk*') ? 'active' : '' }}">
-                <i class="fas fa-envelope-open"></i>
-                <span>Surat Masuk</span>
-            </a>
-            @endif
-
             @if(Auth::user()->role == 'admin')
-            <a href="{{ route('surat-keluar.index') }}" class="nav-link {{ request()->is('surat-keluar*') ? 'active' : '' }}">
-                <i class="fas fa-paper-plane"></i>
-                <span>Surat Keluar</span>
+            <div class="menu-label">Master Data</div>
+            <a href="{{ route('jenis-surat.index') }}" class="nav-link {{ request()->is('jenis-surat*') ? 'active' : '' }}">
+                <i class="fas fa-layer-group"></i>
+                <span>Jenis Surat</span>
             </a>
             <a href="{{ route('users.index') }}" class="nav-link {{ request()->is('users*') ? 'active' : '' }}">
                 <i class="fas fa-users-cog"></i>
@@ -409,26 +402,26 @@
             </a>
             @endif
 
-            @if(in_array(Auth::user()->role, ['staff', 'kabid', 'kasi']))
+            @if(in_array(Auth::user()->role, ['admin', 'staff', 'kabid', 'kasi']))
 
             @php
             $notifCount = 0;
             $notifColor = 'danger';
 
             if(Auth::user()->role == 'staff') {
-            $notifCount = \App\Models\SuratKeluar::where('pembuat_id', Auth::id())
-            ->where('status_acc', 'revisi')
+            $notifCount = \App\Models\PengajuanSurat::where('pemohon_id', Auth::id())
+            ->whereIn('status', ['draft', 'ditolak'])
             ->count();
             $notifColor = 'warning';
             }
             elseif(in_array(Auth::user()->role, ['kabid', 'kasi'])) {
-            $notifCount = \App\Models\SuratKeluar::where('posisi_saat_ini', Auth::id())->count();
+            $notifCount = \App\Models\PengajuanSurat::where('posisi_saat_ini', Auth::id())->count();
             }
             @endphp
 
-            <a href="{{ request()->is('surat-keluar/create') ? route('surat-keluar.create') : route('surat-keluar.index') }}" class="nav-link {{ request()->is('surat-keluar*') ? 'active' : '' }}">
+            <a href="{{ request()->is('pengajuan-surat/create') ? route('pengajuan-surat.create') : route('pengajuan-surat.index') }}" class="nav-link {{ request()->is('pengajuan-surat*') ? 'active' : '' }}">
                 <i class="fas fa-file-signature"></i>
-                <span>{{ Auth::user()->role == 'staff' ? 'Buat Surat' : 'Surat Keluar' }}</span>
+                <span>{{ Auth::user()->role == 'staff' ? 'Pengajuan Surat' : 'Pengajuan Surat' }}</span>
 
                 @if($notifCount > 0)
                 <span class="badge bg-{{ $notifColor }} nav-badge">{{ $notifCount }}</span>
