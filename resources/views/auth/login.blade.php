@@ -19,13 +19,14 @@
 
         body {
             font-family: 'Inter', sans-serif;
-            height: 100vh;
-            overflow: hidden;
+            min-height: 100vh;
+            overflow-x: hidden;
+            overflow-y: auto;
         }
 
         .login-container {
             display: flex;
-            height: 100vh;
+            min-height: 100vh;
         }
 
         /* Left Side - Branding */
@@ -221,6 +222,80 @@
             box-shadow: 0 10px 25px rgba(0, 64, 133, 0.3);
         }
 
+        .demo-accounts {
+            margin-top: 22px;
+            padding: 16px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+        }
+
+        .demo-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .demo-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #1a202c;
+            font-size: 0.92rem;
+            font-weight: 700;
+        }
+
+        .demo-password {
+            color: #64748b;
+            font-size: 0.78rem;
+            white-space: nowrap;
+        }
+
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .demo-account {
+            border: 1px solid #dbe4f0;
+            border-radius: 10px;
+            background: white;
+            padding: 10px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .demo-account:hover {
+            border-color: #004085;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+            transform: translateY(-1px);
+        }
+
+        .demo-role {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            color: #0f172a;
+            font-size: 0.82rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .demo-role i {
+            color: #004085;
+            font-size: 0.85rem;
+        }
+
+        .demo-email {
+            color: #64748b;
+            font-size: 0.75rem;
+            overflow-wrap: anywhere;
+        }
+
         .alert {
             padding: 14px 18px;
             border-radius: 10px;
@@ -264,6 +339,10 @@
             .right-panel {
                 padding: 40px 30px;
             }
+
+            .demo-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         @media (max-width: 576px) {
@@ -295,6 +374,12 @@
 
             .login-header h2 {
                 font-size: 1.5rem;
+            }
+
+            .demo-header {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 6px;
             }
         }
     </style>
@@ -354,7 +439,7 @@
                         <label class="form-label">Email</label>
                         <div class="input-wrapper">
                             <i class="fas fa-envelope input-icon"></i>
-                            <input type="email" name="email" class="form-control"
+                            <input type="email" name="email" id="emailInput" class="form-control"
                                 placeholder="nama@perusahaan.com" required autofocus>
                         </div>
                     </div>
@@ -363,7 +448,7 @@
                         <label class="form-label">Password</label>
                         <div class="input-wrapper">
                             <i class="fas fa-lock input-icon"></i>
-                            <input type="password" name="password" class="form-control"
+                            <input type="password" name="password" id="passwordInput" class="form-control"
                                 placeholder="Masukkan password" required>
                         </div>
                     </div>
@@ -373,6 +458,35 @@
                         <i class="fas fa-arrow-right ms-2"></i>
                     </button>
                 </form>
+
+                <div class="demo-accounts" aria-label="Akun demo untuk testing">
+                    <div class="demo-header">
+                        <div class="demo-title">
+                            <i class="fas fa-id-card"></i>
+                            <span>Akun Demo</span>
+                        </div>
+                        <div class="demo-password">Password semua: <strong>password</strong></div>
+                    </div>
+
+                    <div class="demo-grid">
+                        <button type="button" class="demo-account" data-email="admin@dishut.com">
+                            <div class="demo-role"><i class="fas fa-user-shield"></i> Admin</div>
+                            <div class="demo-email">admin@dishut.com</div>
+                        </button>
+                        <button type="button" class="demo-account" data-email="kabid@dishut.com">
+                            <div class="demo-role"><i class="fas fa-user-tie"></i> Kabid</div>
+                            <div class="demo-email">kabid@dishut.com</div>
+                        </button>
+                        <button type="button" class="demo-account" data-email="kasi@dishut.com">
+                            <div class="demo-role"><i class="fas fa-user-check"></i> Kasi</div>
+                            <div class="demo-email">kasi@dishut.com</div>
+                        </button>
+                        <button type="button" class="demo-account" data-email="staf@dishut.com">
+                            <div class="demo-role"><i class="fas fa-user"></i> Staff</div>
+                            <div class="demo-email">staf@dishut.com</div>
+                        </button>
+                    </div>
+                </div>
 
                 <div class="footer-text">
                     <p>&copy; 2024 E-Arsip. Sistem Arsip Digital Profesional</p>
@@ -388,6 +502,15 @@
         document.getElementById('errorMessage').textContent = '{{ $errors->first() }}';
     </script>
     @endif
+
+    <script>
+        document.querySelectorAll('.demo-account').forEach((button) => {
+            button.addEventListener('click', () => {
+                document.getElementById('emailInput').value = button.dataset.email;
+                document.getElementById('passwordInput').value = 'password';
+            });
+        });
+    </script>
 
 </body>
 
