@@ -106,6 +106,55 @@ $currentIndex = $currentIndex === false ? 0 : $currentIndex;
             </div>
         </div>
 
+        @php
+        $canStartKasi = Auth::id() === $pengajuanSurat->posisi_saat_ini && Auth::user()->role === 'kasi' && $pengajuanSurat->status === 'diajukan';
+        $canReviewKasi = Auth::id() === $pengajuanSurat->posisi_saat_ini && Auth::user()->role === 'kasi' && $pengajuanSurat->status === 'diperiksa_kasi';
+        $canStartKabid = Auth::id() === $pengajuanSurat->posisi_saat_ini && Auth::user()->role === 'kabid' && $pengajuanSurat->status === 'disetujui_kasi';
+        $canReviewKabid = Auth::id() === $pengajuanSurat->posisi_saat_ini && Auth::user()->role === 'kabid' && $pengajuanSurat->status === 'diperiksa_kabid';
+        $canResubmit = Auth::id() === $pengajuanSurat->pemohon_id && $pengajuanSurat->status === 'draft';
+        @endphp
+
+        @if($canStartKasi || $canReviewKasi || $canStartKabid || $canReviewKabid || $canResubmit)
+        <div class="detail-panel mb-3">
+            <div class="detail-panel-header">
+                <strong><i class="fas fa-gavel me-2 text-primary"></i>Panel Aksi</strong>
+                <div class="small text-muted mt-1">Catatan akan masuk ke riwayat aktivitas pengajuan.</div>
+            </div>
+            <div class="p-3">
+                <form action="{{ route('pengajuan-surat.process', $pengajuanSurat) }}" method="POST">
+                    @csrf
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Catatan</label>
+                        <textarea name="catatan" class="form-control" rows="3" placeholder="Tulis catatan pemeriksaan, revisi, atau alasan penolakan..."></textarea>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        @if($canStartKasi || $canStartKabid)
+                        <button name="aksi" value="periksa" class="btn btn-primary">
+                            <i class="fas fa-play me-1"></i>Mulai Periksa
+                        </button>
+                        @endif
+                        @if($canReviewKasi || $canReviewKabid)
+                        <button name="aksi" value="acc" class="btn btn-success">
+                            <i class="fas fa-check me-1"></i>Setujui
+                        </button>
+                        <button name="aksi" value="revisi" class="btn btn-warning" onclick="return confirm('Kembalikan pengajuan ini untuk revisi?');">
+                            <i class="fas fa-rotate-left me-1"></i>Revisi
+                        </button>
+                        <button name="aksi" value="ditolak" class="btn btn-danger" onclick="return confirm('Tolak pengajuan ini secara permanen?');">
+                            <i class="fas fa-ban me-1"></i>Tolak
+                        </button>
+                        @endif
+                        @if($canResubmit)
+                        <button name="aksi" value="ajukan_ulang" class="btn btn-primary">
+                            <i class="fas fa-paper-plane me-1"></i>Ajukan Ulang
+                        </button>
+                        @endif
+                    </div>
+                </form>
+            </div>
+        </div>
+        @endif
+
         <div class="detail-panel mb-3">
             <div class="detail-panel-header d-flex flex-column flex-md-row justify-content-between gap-3">
                 <div>
@@ -227,17 +276,46 @@ $currentIndex = $currentIndex === false ? 0 : $currentIndex;
     </div>
 
     <div class="col-lg-4">
-        <div class="detail-panel">
+        <div class="detail-panel mb-3">
             <div class="detail-panel-header">
-                <strong><i class="fas fa-info-circle me-2 text-primary"></i>Catatan Fase 1</strong>
+                <strong><i class="fas fa-info-circle me-2 text-primary"></i>Catatan Alur</strong>
             </div>
             <div class="p-3">
                 <p class="small text-muted mb-3">
-                    Status `Diajukan` berarti pengajuan sudah masuk antrean. Jika tahapnya menampilkan Kasi, berarti dokumen sedang menunggu pemeriksaan Kasi.
+                    Status bergerak dari Staff ke Kasi, lalu Kabid. Setelah Kabid menyetujui final, tombol tanda tangan digital akan aktif untuk Kabid.
                 </p>
                 <a href="{{ route('pengajuan-surat.index') }}" class="btn btn-light border w-100">
                     <i class="fas fa-arrow-left me-2"></i>Kembali
                 </a>
+            </div>
+        </div>
+
+        <div class="detail-panel">
+            <div class="detail-panel-header">
+                <strong><i class="fas fa-clock-rotate-left me-2 text-primary"></i>Riwayat Aktivitas</strong>
+            </div>
+            <div class="activity-list">
+                @forelse($pengajuanSurat->riwayat as $riwayat)
+                <div class="activity-item">
+                    <div class="activity-dot"></div>
+                    <div>
+                        <div class="activity-title">{{ str_replace('_', ' ', strtoupper($riwayat->aksi)) }}</div>
+                        <div class="small text-muted">
+                            {{ $riwayat->actor->name }} • {{ $riwayat->created_at->format('d/m/Y H:i') }}
+                        </div>
+                        <div class="small">
+                            <span class="text-muted">{{ $riwayat->status_sebelum ?: '-' }}</span>
+                            <i class="fas fa-arrow-right mx-1 text-muted"></i>
+                            <strong>{{ $riwayat->status_sesudah }}</strong>
+                        </div>
+                        @if($riwayat->catatan)
+                        <div class="activity-note">{{ $riwayat->catatan }}</div>
+                        @endif
+                    </div>
+                </div>
+                @empty
+                <div class="p-3 text-muted small">Belum ada riwayat aktivitas.</div>
+                @endforelse
             </div>
         </div>
     </div>
@@ -381,6 +459,46 @@ $currentIndex = $currentIndex === false ? 0 : $currentIndex;
         font-size: .72rem;
         white-space: normal;
         word-break: break-all;
+    }
+
+    .activity-list {
+        padding: 10px 14px;
+    }
+
+    .activity-item {
+        display: grid;
+        gap: 10px;
+        grid-template-columns: 12px 1fr;
+        padding: 12px 0;
+        position: relative;
+    }
+
+    .activity-item:not(:last-child) {
+        border-bottom: 1px solid #edf2f7;
+    }
+
+    .activity-dot {
+        background: #0f766e;
+        border-radius: 999px;
+        height: 10px;
+        margin-top: 6px;
+        width: 10px;
+    }
+
+    .activity-title {
+        color: #0f172a;
+        font-size: .78rem;
+        font-weight: 900;
+        letter-spacing: .04em;
+    }
+
+    .activity-note {
+        background: #f8fafc;
+        border-left: 3px solid #0f766e;
+        color: #475569;
+        font-size: .82rem;
+        margin-top: 8px;
+        padding: 8px 10px;
     }
 
     .document-preview-modal .modal-content {

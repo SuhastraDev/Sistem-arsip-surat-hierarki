@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class PengajuanSurat extends Model
@@ -59,6 +60,11 @@ class PengajuanSurat extends Model
         return $this->hasOne(DigitalSignature::class);
     }
 
+    public function riwayat(): HasMany
+    {
+        return $this->hasMany(RiwayatPengajuanSurat::class)->latest();
+    }
+
     public function getStatusLabelAttribute(): string
     {
         return self::STATUS[$this->status] ?? ucfirst((string) $this->status);
@@ -66,12 +72,28 @@ class PengajuanSurat extends Model
 
     public function getTahapLabelAttribute(): string
     {
+        if ($this->status === 'draft' && $this->posisi?->id === $this->pemohon_id) {
+            return 'Menunggu revisi pemohon';
+        }
+
         if ($this->status === 'diajukan' && $this->posisi?->role === 'kasi') {
             return 'Menunggu pemeriksaan Kasi';
         }
 
+        if ($this->status === 'diperiksa_kasi') {
+            return 'Sedang diperiksa Kasi';
+        }
+
         if ($this->status === 'disetujui_kasi' || ($this->status === 'diajukan' && $this->posisi?->role === 'kabid')) {
             return 'Menunggu pemeriksaan Kabid';
+        }
+
+        if ($this->status === 'diperiksa_kabid') {
+            return 'Sedang diperiksa Kabid';
+        }
+
+        if ($this->status === 'disetujui_kabid') {
+            return 'Menunggu tanda tangan Kabid';
         }
 
         if ($this->status === 'ditandatangani') {

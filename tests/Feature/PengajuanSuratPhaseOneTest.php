@@ -63,7 +63,7 @@ class PengajuanSuratPhaseOneTest extends TestCase
 
         $pengajuan = PengajuanSurat::firstOrFail();
 
-        $this->assertStringStartsWith('PGJ-20260724-', $pengajuan->nomor_pengajuan);
+        $this->assertStringStartsWith('PGJ-'.now()->format('Ymd').'-', $pengajuan->nomor_pengajuan);
         $this->assertSame('Monitoring kawasan hutan', $pengajuan->metadata['form_data']['tujuan_penugasan']);
     }
 
@@ -189,5 +189,93 @@ class PengajuanSuratPhaseOneTest extends TestCase
             'status' => 'ditandatangani',
             'posisi_saat_ini' => null,
         ]);
+    }
+
+    public function test_pengajuan_approval_flows_from_kasi_to_kabid(): void
+    {
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $kasi = User::where('role', 'kasi')->firstOrFail();
+        $kabid = User::where('role', 'kabid')->firstOrFail();
+        $jenisSurat = JenisSurat::where('slug', 'surat-tugas')->firstOrFail();
+
+        $this->actingAs($staff)
+            ->post(route('pengajuan-surat.store'), [
+                'jenis_surat_id' => $jenisSurat->id,
+                'tanggal_pengajuan' => '2026-07-25',
+                'perihal' => 'Pengajuan alur approval',
+                'fields' => [
+                    'pegawai_ditugaskan' => 'Mas Asep',
+                    'jabatan_unit' => 'Staf Lapangan',
+                    'tujuan_penugasan' => 'Monitoring kawasan',
+                    'lokasi_tugas' => 'Hutan Lindung',
+                    'tanggal_mulai' => '2026-07-26',
+                    'tanggal_selesai' => '2026-07-27',
+                    'dasar_keperluan' => 'Agenda monitoring',
+                    'uraian_tugas' => 'Melakukan pemantauan',
+                    'pemberi_tugas' => 'Kabid',
+                    'lampiran' => '-',
+                ],
+            ]);
+
+        $pengajuan = PengajuanSurat::firstOrFail();
+
+        $this->actingAs($kasi)
+            ->post(route('pengajuan-surat.process', $pengajuan), [
+                'aksi' => 'periksa',
+                'catatan' => 'Mulai diperiksa Kasi',
+            ])
+            ->assertRedirect()
+            ->assertSessionMissing('error');
+
+        $this->assertDatabaseHas('pengajuan_surats', [
+            'id' => $pengajuan->id,
+            'status' => 'diperiksa_kasi',
+            'posisi_saat_ini' => $kasi->id,
+        ]);
+
+        $this->actingAs($kasi)
+            ->post(route('pengajuan-surat.process', $pengajuan), [
+                'aksi' => 'acc',
+                'catatan' => 'Disetujui Kasi',
+            ])
+            ->assertRedirect()
+            ->assertSessionMissing('error');
+
+        $this->assertDatabaseHas('pengajuan_surats', [
+            'id' => $pengajuan->id,
+            'status' => 'disetujui_kasi',
+            'posisi_saat_ini' => $kabid->id,
+        ]);
+
+        $this->actingAs($kabid)
+            ->post(route('pengajuan-surat.process', $pengajuan), [
+                'aksi' => 'periksa',
+                'catatan' => 'Mulai diperiksa Kabid',
+            ])
+            ->assertRedirect()
+            ->assertSessionMissing('error');
+
+        $this->actingAs($kabid)
+            ->post(route('pengajuan-surat.process', $pengajuan), [
+                'aksi' => 'acc',
+                'catatan' => 'Disetujui Kabid',
+            ])
+            ->assertRedirect()
+            ->assertSessionMissing('error');
+
+        $this->assertDatabaseHas('pengajuan_surats', [
+            'id' => $pengajuan->id,
+            'status' => 'disetujui_kabid',
+            'posisi_saat_ini' => $kabid->id,
+        ]);
+
+        foreach (['diajukan', 'periksa_kasi', 'acc_kasi', 'periksa_kabid', 'acc_kabid'] as $action) {
+            $this->assertDatabaseHas('riwayat_pengajuan_surats', [
+                'pengajuan_surat_id' => $pengajuan->id,
+                'aksi' => $action,
+            ]);
+        }
     }
 }
