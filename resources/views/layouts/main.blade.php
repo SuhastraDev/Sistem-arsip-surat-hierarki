@@ -419,7 +419,7 @@
             }
             @endphp
 
-            <a href="{{ request()->is('pengajuan-surat/create') ? route('pengajuan-surat.create') : route('pengajuan-surat.index') }}" class="nav-link {{ request()->is('pengajuan-surat*') ? 'active' : '' }}">
+            <a href="{{ route('pengajuan-surat.index') }}" class="nav-link {{ request()->is('pengajuan-surat*') ? 'active' : '' }}">
                 <i class="fas fa-file-signature"></i>
                 <span>{{ Auth::user()->role == 'staff' ? 'Pengajuan Surat' : 'Pengajuan Surat' }}</span>
 

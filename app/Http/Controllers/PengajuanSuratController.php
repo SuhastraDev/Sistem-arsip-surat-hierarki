@@ -5,13 +5,18 @@ namespace App\Http\Controllers;
 use App\Models\JenisSurat;
 use App\Models\PengajuanSurat;
 use App\Models\User;
+use App\Services\DigitalSignatureService;
 use App\Services\SuratTemplateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use RuntimeException;
 
 class PengajuanSuratController extends Controller
 {
-    public function __construct(private readonly SuratTemplateService $templateService) {}
+    public function __construct(
+        private readonly SuratTemplateService $templateService,
+        private readonly DigitalSignatureService $digitalSignatureService,
+    ) {}
 
     public function index(Request $request)
     {
@@ -52,6 +57,8 @@ class PengajuanSuratController extends Controller
 
     public function create()
     {
+        abort_if(Auth::user()->role === 'admin', 403);
+
         $jenisSurats = JenisSurat::aktif()->orderBy('nama')->get();
         $templateDefinitions = $this->templateService->definitions();
 
@@ -60,6 +67,8 @@ class PengajuanSuratController extends Controller
 
     public function store(Request $request)
     {
+        abort_if(Auth::user()->role === 'admin', 403);
+
         $baseData = $request->validate([
             'jenis_surat_id' => ['required', 'exists:jenis_surats,id'],
             'tanggal_pengajuan' => ['required', 'date'],
@@ -100,7 +109,7 @@ class PengajuanSuratController extends Controller
 
     public function show(PengajuanSurat $pengajuanSurat)
     {
-        $pengajuanSurat->load(['jenisSurat', 'pemohon', 'posisi']);
+        $pengajuanSurat->load(['jenisSurat', 'pemohon', 'posisi', 'digitalSignature.signer']);
         $user = Auth::user();
 
         $isAllowed = $user->role === 'admin'
@@ -112,6 +121,19 @@ class PengajuanSuratController extends Controller
         $templateRows = $this->templateService->templateRows($pengajuanSurat);
 
         return view('pengajuan-surat.show', compact('pengajuanSurat', 'templateRows'));
+    }
+
+    public function sign(PengajuanSurat $pengajuanSurat)
+    {
+        $pengajuanSurat->load(['jenisSurat', 'pemohon', 'digitalSignature']);
+
+        try {
+            $this->digitalSignatureService->sign($pengajuanSurat, Auth::user());
+        } catch (RuntimeException $exception) {
+            return back()->with('error', $exception->getMessage());
+        }
+
+        return back()->with('success', 'Dokumen berhasil ditandatangani secara digital.');
     }
 
     public function preview(PengajuanSurat $pengajuanSurat)
@@ -159,10 +181,6 @@ class PengajuanSuratController extends Controller
 
         if ($user->role === 'kasi') {
             return User::where('role', 'kabid')->first();
-        }
-
-        if ($user->role === 'admin') {
-            return User::where('role', 'kasi')->first() ?? User::where('role', 'kabid')->first();
         }
 
         return null;

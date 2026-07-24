@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class PengajuanSurat extends Model
 {
@@ -51,6 +52,11 @@ class PengajuanSurat extends Model
     public function posisi(): BelongsTo
     {
         return $this->belongsTo(User::class, 'posisi_saat_ini');
+    }
+
+    public function digitalSignature(): HasOne
+    {
+        return $this->hasOne(DigitalSignature::class);
     }
 
     public function getStatusLabelAttribute(): string

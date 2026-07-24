@@ -10,7 +10,7 @@
             <h4 class="mb-1 fw-bold">Pengajuan Surat</h4>
             <p class="text-muted mb-0">Pantau permohonan Surat Cuti, Surat Tugas, dan Nota Dinas dari satu meja kerja.</p>
         </div>
-        @if(in_array(Auth::user()->role, ['admin', 'staff', 'kasi']))
+        @if(in_array(Auth::user()->role, ['staff', 'kasi']))
         <a href="{{ route('pengajuan-surat.create') }}" class="btn btn-primary btn-action">
             <i class="fas fa-plus-circle me-1"></i>Buat Pengajuan
         </a>

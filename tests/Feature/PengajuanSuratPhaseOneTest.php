@@ -73,6 +73,27 @@ class PengajuanSuratPhaseOneTest extends TestCase
             ->assertRedirect(route('login'));
     }
 
+    public function test_admin_cannot_create_pengajuan_surat(): void
+    {
+        $this->seed();
+
+        $admin = User::where('role', 'admin')->firstOrFail();
+        $jenisSurat = JenisSurat::where('slug', 'surat-cuti')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->get(route('pengajuan-surat.create'))
+            ->assertForbidden();
+
+        $this->actingAs($admin)
+            ->post(route('pengajuan-surat.store'), [
+                'jenis_surat_id' => $jenisSurat->id,
+                'tanggal_pengajuan' => '2026-07-24',
+                'perihal' => 'Pengajuan cuti oleh admin',
+                'fields' => [],
+            ])
+            ->assertForbidden();
+    }
+
     public function test_staff_can_preview_and_export_pengajuan_template(): void
     {
         $this->seed();
@@ -113,5 +134,60 @@ class PengajuanSuratPhaseOneTest extends TestCase
         $this->get(route('pengajuan-surat.export', [$pengajuan, 'docx']))
             ->assertOk()
             ->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    }
+
+    public function test_kabid_can_digitally_sign_approved_pengajuan(): void
+    {
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $kabid = User::where('role', 'kabid')->firstOrFail();
+        $jenisSurat = JenisSurat::where('slug', 'surat-tugas')->firstOrFail();
+
+        $pengajuan = PengajuanSurat::create([
+            'jenis_surat_id' => $jenisSurat->id,
+            'pemohon_id' => $staff->id,
+            'nomor_pengajuan' => 'PGJ-20260724-9999',
+            'tanggal_pengajuan' => '2026-07-24',
+            'perihal' => 'Surat tugas untuk ditandatangani',
+            'status' => 'disetujui_kabid',
+            'posisi_saat_ini' => $kabid->id,
+            'metadata' => [
+                'form_data' => [
+                    'pegawai_ditugaskan' => 'Mas Asep',
+                    'jabatan_unit' => 'Staf Lapangan',
+                    'tujuan_penugasan' => 'Monitoring kawasan',
+                    'lokasi_tugas' => 'Hutan Lindung',
+                    'tanggal_mulai' => '2026-07-25',
+                    'tanggal_selesai' => '2026-07-26',
+                    'dasar_keperluan' => 'Agenda monitoring',
+                    'uraian_tugas' => 'Melakukan pemantauan',
+                    'pemberi_tugas' => 'Kabid',
+                    'lampiran' => '-',
+                ],
+            ],
+        ]);
+
+        $this->actingAs($kabid)
+            ->post(route('pengajuan-surat.sign', $pengajuan))
+            ->assertRedirect()
+            ->assertSessionMissing('error');
+
+        $this->assertDatabaseHas('signature_keys', [
+            'user_id' => $kabid->id,
+            'is_active' => true,
+        ]);
+
+        $this->assertDatabaseHas('digital_signatures', [
+            'pengajuan_surat_id' => $pengajuan->id,
+            'signer_id' => $kabid->id,
+            'algorithm' => 'RSA-2048/SHA-512',
+        ]);
+
+        $this->assertDatabaseHas('pengajuan_surats', [
+            'id' => $pengajuan->id,
+            'status' => 'ditandatangani',
+            'posisi_saat_ini' => null,
+        ]);
     }
 }

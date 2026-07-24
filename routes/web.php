@@ -32,6 +32,7 @@ Route::middleware('auth')->group(function () {
     // Route Surat Keluar
     Route::resource('surat-keluar', SuratKeluarController::class);
     Route::resource('jenis-surat', JenisSuratController::class)->except(['create', 'edit', 'show']);
+    Route::post('pengajuan-surat/{pengajuan_surat}/sign', [PengajuanSuratController::class, 'sign'])->name('pengajuan-surat.sign');
     Route::get('pengajuan-surat/{pengajuan_surat}/preview', [PengajuanSuratController::class, 'preview'])->name('pengajuan-surat.preview');
     Route::get('pengajuan-surat/{pengajuan_surat}/export/{format}', [PengajuanSuratController::class, 'export'])->name('pengajuan-surat.export');
     Route::resource('pengajuan-surat', PengajuanSuratController::class)->only(['index', 'create', 'store', 'show']);

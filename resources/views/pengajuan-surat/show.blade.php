@@ -53,6 +53,13 @@ $currentIndex = array_search($pengajuanSurat->status, $keys, true);
 $currentIndex = $currentIndex === false ? 0 : $currentIndex;
 @endphp
 
+@if(session('success'))
+<div class="alert alert-success">{{ session('success') }}</div>
+@endif
+@if(session('error'))
+<div class="alert alert-danger">{{ session('error') }}</div>
+@endif
+
 <div class="row">
     <div class="col-lg-8">
         <div class="detail-panel mb-3">
@@ -118,6 +125,52 @@ $currentIndex = $currentIndex === false ? 0 : $currentIndex;
                     <strong>{{ $row['value'] }}</strong>
                 </div>
                 @endforeach
+            </div>
+        </div>
+
+        <div class="detail-panel mb-3">
+            <div class="detail-panel-header d-flex flex-column flex-md-row justify-content-between gap-3">
+                <div>
+                    <strong><i class="fas fa-signature me-2 text-primary"></i>Digital Signature</strong>
+                    <div class="small text-muted mt-1">Tanda tangan digital memakai hash SHA-512 dan RSA milik Kabid.</div>
+                </div>
+                @if(Auth::user()->role === 'kabid' && $pengajuanSurat->status === 'disetujui_kabid' && ! $pengajuanSurat->digitalSignature)
+                <form action="{{ route('pengajuan-surat.sign', $pengajuanSurat) }}" method="POST">
+                    @csrf
+                    <button class="btn btn-sm btn-primary" onclick="return confirm('Tandatangani dokumen ini secara digital?');">
+                        <i class="fas fa-pen-nib me-1"></i>Tandatangani
+                    </button>
+                </form>
+                @endif
+            </div>
+            <div class="signature-panel">
+                @if($pengajuanSurat->digitalSignature)
+                <div class="signature-state signed">
+                    <i class="fas fa-circle-check"></i>
+                    <div>
+                        <strong>Dokumen sudah ditandatangani</strong>
+                        <span>Oleh {{ $pengajuanSurat->digitalSignature->signer->name }} pada {{ $pengajuanSurat->digitalSignature->signed_at->format('d/m/Y H:i') }} WIB</span>
+                    </div>
+                </div>
+                <div class="signature-grid">
+                    <div>
+                        <span>Algoritma</span>
+                        <strong>{{ $pengajuanSurat->digitalSignature->algorithm }}</strong>
+                    </div>
+                    <div>
+                        <span>Hash dokumen</span>
+                        <code>{{ $pengajuanSurat->digitalSignature->document_hash }}</code>
+                    </div>
+                </div>
+                @else
+                <div class="signature-state pending">
+                    <i class="fas fa-clock"></i>
+                    <div>
+                        <strong>Belum ditandatangani</strong>
+                        <span>Tombol tanda tangan akan aktif untuk Kabid setelah status menjadi Disetujui Kabid.</span>
+                    </div>
+                </div>
+                @endif
             </div>
         </div>
 
@@ -255,6 +308,79 @@ $currentIndex = $currentIndex === false ? 0 : $currentIndex;
         gap: 7px;
         padding: 5px 10px;
         white-space: nowrap;
+    }
+
+    .signature-panel {
+        padding: 16px;
+    }
+
+    .signature-state {
+        align-items: center;
+        border-radius: 8px;
+        display: flex;
+        gap: 12px;
+        padding: 14px;
+    }
+
+    .signature-state i {
+        font-size: 1.35rem;
+    }
+
+    .signature-state strong,
+    .signature-state span {
+        display: block;
+    }
+
+    .signature-state span {
+        color: #64748b;
+        font-size: .84rem;
+        margin-top: 2px;
+    }
+
+    .signature-state.signed {
+        background: #ecfdf5;
+        border: 1px solid #bbf7d0;
+        color: #166534;
+    }
+
+    .signature-state.pending {
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+        color: #92400e;
+    }
+
+    .signature-grid {
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        display: grid;
+        gap: 0;
+        grid-template-columns: 180px 1fr;
+        margin-top: 12px;
+        overflow: hidden;
+    }
+
+    .signature-grid div {
+        padding: 12px;
+    }
+
+    .signature-grid div:first-child {
+        border-right: 1px solid #e2e8f0;
+    }
+
+    .signature-grid span {
+        color: #64748b;
+        display: block;
+        font-size: .72rem;
+        font-weight: 800;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+    }
+
+    .signature-grid code {
+        display: block;
+        font-size: .72rem;
+        white-space: normal;
+        word-break: break-all;
     }
 
     .document-preview-modal .modal-content {
@@ -446,6 +572,15 @@ $currentIndex = $currentIndex === false ? 0 : $currentIndex;
 
         .roadmap-item {
             grid-template-columns: 34px 1fr;
+        }
+
+        .signature-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .signature-grid div:first-child {
+            border-bottom: 1px solid #e2e8f0;
+            border-right: 0;
         }
 
         .roadmap-node {
