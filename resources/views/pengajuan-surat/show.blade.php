@@ -52,6 +52,10 @@ $keys = array_keys($steps);
 $currentIndex = array_search($pengajuanSurat->status, $keys, true);
 $currentIndex = $currentIndex === false ? 0 : $currentIndex;
 @endphp
+@php
+$verificationCode = $pengajuanSurat->digitalSignature?->verification_code;
+$verificationUrl = $verificationCode ? route('verification.show', $verificationCode) : null;
+@endphp
 
 @if(session('success'))
 <div class="alert alert-success">{{ session('success') }}</div>
@@ -211,6 +215,21 @@ $currentIndex = $currentIndex === false ? 0 : $currentIndex;
                         <code>{{ $pengajuanSurat->digitalSignature->document_hash }}</code>
                     </div>
                 </div>
+                @if($verificationUrl)
+                <div class="verification-box">
+                    <div class="verification-qr">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=136x136&data={{ urlencode($verificationUrl) }}" alt="QR verifikasi {{ $verificationCode }}">
+                    </div>
+                    <div>
+                        <span class="verification-kicker">Kode Verifikasi</span>
+                        <code>{{ $verificationCode }}</code>
+                        <p class="small text-muted mb-2">Scan QR atau buka halaman verifikasi untuk memastikan tanda tangan dan file final PDF/DOCX masih cocok.</p>
+                        <a href="{{ $verificationUrl }}" class="btn btn-sm btn-outline-success">
+                            <i class="fas fa-shield-halved me-1"></i>Buka Verifikasi
+                        </a>
+                    </div>
+                </div>
+                @endif
                 @else
                 <div class="signature-state pending">
                     <i class="fas fa-clock"></i>
@@ -461,6 +480,57 @@ $currentIndex = $currentIndex === false ? 0 : $currentIndex;
         word-break: break-all;
     }
 
+    .verification-box {
+        align-items: center;
+        background: #f8fafc;
+        border: 1px solid #dbe5ef;
+        border-radius: 8px;
+        display: grid;
+        gap: 14px;
+        grid-template-columns: 136px 1fr;
+        margin-top: 12px;
+        padding: 14px;
+    }
+
+    .verification-qr {
+        align-items: center;
+        background: #fff;
+        border: 1px solid #dbe5ef;
+        border-radius: 8px;
+        display: flex;
+        height: 136px;
+        justify-content: center;
+        overflow: hidden;
+        width: 136px;
+    }
+
+    .verification-qr img {
+        display: block;
+        height: 136px;
+        width: 136px;
+    }
+
+    .verification-kicker {
+        color: #0f766e;
+        display: block;
+        font-size: .72rem;
+        font-weight: 900;
+        letter-spacing: .1em;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+    }
+
+    .verification-box code {
+        background: #ecfdf5;
+        border: 1px solid #bbf7d0;
+        border-radius: 6px;
+        color: #166534;
+        display: inline-block;
+        font-weight: 800;
+        margin-bottom: 8px;
+        padding: 5px 8px;
+    }
+
     .activity-list {
         padding: 10px 14px;
     }
@@ -693,6 +763,10 @@ $currentIndex = $currentIndex === false ? 0 : $currentIndex;
         }
 
         .signature-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .verification-box {
             grid-template-columns: 1fr;
         }
 

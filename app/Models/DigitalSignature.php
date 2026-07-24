@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class DigitalSignature extends Model
 {
@@ -18,6 +19,7 @@ class DigitalSignature extends Model
         'signature',
         'public_key',
         'algorithm',
+        'verification_code',
         'signed_at',
         'metadata',
     ];
@@ -40,5 +42,10 @@ class DigitalSignature extends Model
     public function signer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'signer_id');
+    }
+
+    public function verificationLogs(): HasMany
+    {
+        return $this->hasMany(VerificationLog::class);
     }
 }

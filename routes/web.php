@@ -9,11 +9,16 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SuratKeluarController;
 use App\Http\Controllers\SuratMasukController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\VerificationController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return redirect('/login');
 });
+
+Route::get('/verifikasi', [VerificationController::class, 'index'])->name('verification.index');
+Route::post('/verifikasi', [VerificationController::class, 'verify'])->name('verification.verify');
+Route::get('/verifikasi/{code}', [VerificationController::class, 'show'])->name('verification.show');
 
 // Route untuk Tamu
 Route::middleware('guest')->group(function () {

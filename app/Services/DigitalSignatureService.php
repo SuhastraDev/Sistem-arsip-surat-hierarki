@@ -6,6 +6,8 @@ use App\Models\DigitalSignature;
 use App\Models\PengajuanSurat;
 use App\Models\SignatureKey;
 use App\Models\User;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 class DigitalSignatureService
@@ -29,6 +31,11 @@ class DigitalSignatureService
         $signatureKey = $this->activeKeyFor($signer);
         $documentPayload = $this->documentPayload($pengajuanSurat);
         $documentHash = hash('sha512', $documentPayload);
+        $verificationCode = $this->verificationCode();
+        $pdfBinary = $this->templateService->pdfBinary($pengajuanSurat);
+        $docxBinary = $this->templateService->docxBinary($pengajuanSurat);
+        $pdfPath = 'signed-documents/'.$verificationCode.'.pdf';
+        $docxPath = 'signed-documents/'.$verificationCode.'.docx';
 
         $privateKey = openssl_pkey_get_private($signatureKey->encrypted_private_key);
 
@@ -43,6 +50,9 @@ class DigitalSignatureService
             throw new RuntimeException('Gagal membuat digital signature.');
         }
 
+        Storage::disk('local')->put($pdfPath, $pdfBinary);
+        Storage::disk('local')->put($docxPath, $docxBinary);
+
         $digitalSignature = DigitalSignature::create([
             'pengajuan_surat_id' => $pengajuanSurat->id,
             'signature_key_id' => $signatureKey->id,
@@ -51,11 +61,20 @@ class DigitalSignatureService
             'signature' => base64_encode($signature),
             'public_key' => $signatureKey->public_key,
             'algorithm' => $signatureKey->algorithm,
+            'verification_code' => $verificationCode,
             'signed_at' => now(),
             'metadata' => [
                 'payload_version' => 'template_plain_text_v1',
                 'hash_algorithm' => 'SHA-512',
                 'signature_algorithm' => 'RSA/SHA-512',
+                'file_hashes' => [
+                    'pdf' => hash('sha512', $pdfBinary),
+                    'docx' => hash('sha512', $docxBinary),
+                ],
+                'file_paths' => [
+                    'pdf' => $pdfPath,
+                    'docx' => $docxPath,
+                ],
             ],
         ]);
 
@@ -139,6 +158,15 @@ class DigitalSignatureService
         $pengajuanSurat->loadMissing(['jenisSurat', 'pemohon']);
 
         return implode("\n", $this->templateService->plainText($pengajuanSurat));
+    }
+
+    private function verificationCode(): string
+    {
+        do {
+            $code = 'ES-'.Str::upper(Str::random(10));
+        } while (DigitalSignature::where('verification_code', $code)->exists());
+
+        return $code;
     }
 
     private function opensslConfigPath(): ?string

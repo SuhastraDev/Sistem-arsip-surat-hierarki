@@ -374,6 +374,10 @@
                 <i class="fas fa-home"></i>
                 <span>Dashboard</span>
             </a>
+            <a href="{{ route('verification.index') }}" class="nav-link {{ request()->is('verifikasi*') ? 'active' : '' }}">
+                <i class="fas fa-shield-halved"></i>
+                <span>Verifikasi Dokumen</span>
+            </a>
 
             @if(Auth::user()->role == 'admin')
             <div class="menu-label">Master Data</div>

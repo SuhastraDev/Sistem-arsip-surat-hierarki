@@ -131,7 +131,9 @@ class PengajuanSuratController extends Controller
 
         $isAllowed = $user->role === 'admin'
             || $pengajuanSurat->pemohon_id === $user->id
-            || $pengajuanSurat->posisi_saat_ini === $user->id;
+            || $pengajuanSurat->posisi_saat_ini === $user->id
+            || $pengajuanSurat->digitalSignature?->signer_id === $user->id
+            || $pengajuanSurat->riwayat()->where('actor_id', $user->id)->exists();
 
         abort_unless($isAllowed, 403);
 
@@ -202,6 +204,7 @@ class PengajuanSuratController extends Controller
         $isAllowed = $user->role === 'admin'
             || $pengajuanSurat->pemohon_id === $user->id
             || $pengajuanSurat->posisi_saat_ini === $user->id
+            || $pengajuanSurat->digitalSignature?->signer_id === $user->id
             || $pengajuanSurat->riwayat()->where('actor_id', $user->id)->exists();
 
         abort_unless($isAllowed, 403);

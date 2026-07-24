@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\PengajuanSurat;
 use Illuminate\Http\Response;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use ZipArchive;
 
@@ -108,8 +109,7 @@ class SuratTemplateService
 
     public function downloadPdf(PengajuanSurat $pengajuanSurat): Response
     {
-        $content = $this->plainText($pengajuanSurat);
-        $pdf = $this->makeSimplePdf($content);
+        $pdf = $this->storedSignedArtifact($pengajuanSurat, 'pdf') ?? $this->pdfBinary($pengajuanSurat);
 
         return response($pdf, 200, [
             'Content-Type' => 'application/pdf',
@@ -119,12 +119,22 @@ class SuratTemplateService
 
     public function downloadDocx(PengajuanSurat $pengajuanSurat): Response
     {
-        $docx = $this->makeSimpleDocx($this->plainText($pengajuanSurat));
+        $docx = $this->storedSignedArtifact($pengajuanSurat, 'docx') ?? $this->docxBinary($pengajuanSurat);
 
         return response($docx, 200, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             'Content-Disposition' => 'attachment; filename="'.$this->fileName($pengajuanSurat, 'docx').'"',
         ]);
+    }
+
+    public function pdfBinary(PengajuanSurat $pengajuanSurat): string
+    {
+        return $this->makeSimplePdf($this->plainText($pengajuanSurat));
+    }
+
+    public function docxBinary(PengajuanSurat $pengajuanSurat): string
+    {
+        return $this->makeSimpleDocx($this->plainText($pengajuanSurat));
     }
 
     public function plainText(PengajuanSurat $pengajuanSurat): array
@@ -144,9 +154,21 @@ class SuratTemplateService
         }
 
         $lines[] = '';
-        $lines[] = 'Dokumen ini adalah template awal. Tanda tangan digital dan QR code dikerjakan pada fase berikutnya.';
+        $lines[] = 'Dokumen final dapat diverifikasi melalui kode verifikasi setelah ditandatangani.';
 
         return $lines;
+    }
+
+    private function storedSignedArtifact(PengajuanSurat $pengajuanSurat, string $format): ?string
+    {
+        $pengajuanSurat->loadMissing('digitalSignature');
+        $path = $pengajuanSurat->digitalSignature?->metadata['file_paths'][$format] ?? null;
+
+        if (! is_string($path) || ! Storage::disk('local')->exists($path)) {
+            return null;
+        }
+
+        return Storage::disk('local')->get($path);
     }
 
     private function fileName(PengajuanSurat $pengajuanSurat, string $extension): string
