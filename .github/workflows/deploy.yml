@@ -1,0 +1,98 @@
+name: CI/CD Deploy
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: Build and test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, dom, fileinfo, mysql, pdo_mysql, sqlite, pdo_sqlite
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Prepare Laravel environment
+        run: |
+          cp .env.example .env
+          touch database/database.sqlite
+          php artisan key:generate
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build frontend assets
+        run: npm run build
+
+      - name: Run tests
+        run: php artisan test
+
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    needs: ci
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    environment: production
+
+    steps:
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/suhastra.pem
+          chmod 600 ~/.ssh/suhastra.pem
+          ssh-keyscan -H 52.65.94.214 >> ~/.ssh/known_hosts
+
+      - name: Deploy application
+        run: |
+          ssh -i ~/.ssh/suhastra.pem ubuntu@52.65.94.214 <<'EOF'
+          set -euo pipefail
+
+          cd /var/www/sistem-arsip-dishut
+          git fetch origin main
+          git reset --hard origin/main
+
+          composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
+          npm ci
+          npm run build
+
+          php artisan migrate --force
+          php artisan storage:link || true
+          php artisan optimize:clear
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+
+          sudo chown -R ubuntu:www-data storage bootstrap/cache public/build
+          sudo chmod -R ug+rwX storage bootstrap/cache public/build
+          sudo systemctl reload php8.4-fpm
+          sudo systemctl reload nginx
+          EOF
