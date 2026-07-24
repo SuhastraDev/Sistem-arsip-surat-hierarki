@@ -103,12 +103,12 @@ $currentIndex = $currentIndex === false ? 0 : $currentIndex;
             <div class="detail-panel-header d-flex flex-column flex-md-row justify-content-between gap-3">
                 <div>
                     <strong><i class="fas fa-file-contract me-2 text-primary"></i>Data Persyaratan</strong>
-                    <div class="small text-muted mt-1">Buka preview dokumen dulu, lalu unduh PDF atau DOCX dari halaman preview.</div>
+                    <div class="small text-muted mt-1">Preview dokumen tampil dalam modal. Unduh PDF atau DOCX setelah dicek.</div>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
-                    <a href="{{ route('pengajuan-surat.preview', $pengajuanSurat) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#documentPreviewModal">
                         <i class="fas fa-eye me-1"></i>Lihat Dokumen
-                    </a>
+                    </button>
                 </div>
             </div>
             <div class="requirement-summary">
@@ -189,6 +189,37 @@ $currentIndex = $currentIndex === false ? 0 : $currentIndex;
         </div>
     </div>
 </div>
+
+<div class="modal fade document-preview-modal" id="documentPreviewModal" tabindex="-1" aria-labelledby="documentPreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <div class="section-kicker">Preview Dokumen</div>
+                    <h5 class="modal-title mb-0" id="documentPreviewModalLabel">{{ $pengajuanSurat->jenisSurat->nama }}</h5>
+                    <small class="text-muted">{{ $pengajuanSurat->nomor_pengajuan }}</small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body">
+                <iframe
+                    src="{{ route('pengajuan-surat.preview', $pengajuanSurat) }}?embed=1"
+                    title="Preview dokumen {{ $pengajuanSurat->nomor_pengajuan }}"
+                    class="document-preview-frame"></iframe>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Tutup</button>
+                <a href="{{ route('pengajuan-surat.export', [$pengajuanSurat, 'pdf']) }}" class="btn btn-outline-primary">
+                    <i class="fas fa-file-pdf me-1"></i>Download PDF
+                </a>
+                <a href="{{ route('pengajuan-surat.export', [$pengajuanSurat, 'docx']) }}" class="btn btn-primary">
+                    <i class="fas fa-file-word me-1"></i>Download DOCX
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
     .section-kicker {
         color: #0f766e;
@@ -224,6 +255,31 @@ $currentIndex = $currentIndex === false ? 0 : $currentIndex;
         gap: 7px;
         padding: 5px 10px;
         white-space: nowrap;
+    }
+
+    .document-preview-modal .modal-content {
+        border: 0;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .document-preview-modal .modal-header,
+    .document-preview-modal .modal-footer {
+        background: #f8fafc;
+        border-color: #e7edf3;
+    }
+
+    .document-preview-modal .modal-body {
+        background: #e2e8f0;
+        padding: 14px;
+    }
+
+    .document-preview-frame {
+        background: #fff;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        height: 72vh;
+        width: 100%;
     }
 
     .requirement-summary {

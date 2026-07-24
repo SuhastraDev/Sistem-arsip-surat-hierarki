@@ -122,6 +122,7 @@ class PengajuanSuratController extends Controller
         return view('pengajuan-surat.template', [
             'pengajuanSurat' => $pengajuanSurat,
             'rows' => $this->templateService->templateRows($pengajuanSurat),
+            'isEmbed' => request()->boolean('embed'),
             'isPrint' => false,
         ]);
     }

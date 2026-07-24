@@ -166,11 +166,22 @@
                 padding: 36px 44px;
             }
         }
+
+        body.is-embed {
+            background: #e2e8f0;
+            padding: 14px;
+        }
+
+        body.is-embed .document-page {
+            box-shadow: 0 12px 28px rgba(15, 23, 42, .12);
+            min-height: 980px;
+            padding: 44px 52px;
+        }
     </style>
 </head>
 
-<body>
-    @unless($isPrint)
+<body class="{{ ($isEmbed ?? false) ? 'is-embed' : '' }}">
+    @unless($isPrint || ($isEmbed ?? false))
     <div class="toolbar">
         <div class="toolbar-title">Preview dokumen sebelum diunduh</div>
         <div class="toolbar-actions">
