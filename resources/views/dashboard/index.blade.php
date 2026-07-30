@@ -4,6 +4,74 @@
 
 @section('content')
 
+@if(in_array(Auth::user()->role, ['kabid', 'kasi']))
+<div class="request-overview mb-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-end">
+        <div>
+            <div class="section-kicker">Meja Approval</div>
+            <h4 class="mb-1 fw-bold">Pengajuan Surat</h4>
+            <p class="text-muted mb-0">Fokus halaman ini hanya pengajuan surat baru: periksa, setujui, tanda tangani, lalu kirim hasil final ke Staff.</p>
+        </div>
+        <a href="{{ route('pengajuan-surat.index') }}" class="btn btn-primary">
+            <i class="fas fa-file-signature me-1"></i>Buka Pengajuan
+        </a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-3">
+        <a href="{{ route('pengajuan-surat.index') }}" class="text-decoration-none">
+            <div class="approval-metric primary">
+                <span>Antrean aktif</span>
+                <strong>{{ $pengajuan_aktif }}</strong>
+                <small>Menunggu aksi Anda</small>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="{{ route('pengajuan-surat.index', ['status' => 'disetujui_kabid']) }}" class="text-decoration-none">
+            <div class="approval-metric gold">
+                <span>Siap TTD</span>
+                <strong>{{ $pengajuan_siap_ttd }}</strong>
+                <small>Khusus Kabid</small>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="{{ route('pengajuan-surat.index', ['status' => 'selesai']) }}" class="text-decoration-none">
+            <div class="approval-metric success">
+                <span>Selesai</span>
+                <strong>{{ $pengajuan_selesai }}</strong>
+                <small>Sudah kembali ke Staff</small>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-3">
+        <a href="{{ route('pengajuan-surat.index') }}" class="text-decoration-none">
+            <div class="approval-metric muted">
+                <span>Revisi/Tolak</span>
+                <strong>{{ $pengajuan_revisi }}</strong>
+                <small>Keputusan Anda</small>
+            </div>
+        </a>
+    </div>
+</div>
+
+<div class="detail-panel mt-3">
+    <div class="detail-panel-header">
+        <strong><i class="fas fa-route me-2 text-primary"></i>Alur yang Dipakai</strong>
+    </div>
+    <div class="p-3">
+        <div class="approval-guide">
+            <div><i class="fas fa-user"></i><strong>Staff</strong><span>Mengajukan surat dan menerima hasil final.</span></div>
+            <div><i class="fas fa-user-check"></i><strong>Kasi</strong><span>Memeriksa, menyetujui, revisi, atau menolak.</span></div>
+            <div><i class="fas fa-user-tie"></i><strong>Kabid</strong><span>Memeriksa akhir dan menandatangani dokumen.</span></div>
+            <div><i class="fas fa-qrcode"></i><strong>Final</strong><span>PDF/DOCX berisi QR/kode verifikasi dan kembali ke Staff.</span></div>
+        </div>
+    </div>
+</div>
+@else
+
 <!-- Welcome Header -->
 <div class="mb-3">
     <div class="d-flex justify-content-between align-items-center">
@@ -410,6 +478,7 @@
     </div>
     @endif
 </div>
+@endif
 
 <style>
     .card-hover {
@@ -429,6 +498,82 @@
 
     .progress-bar {
         border-radius: 10px;
+    }
+
+    .approval-metric {
+        background: #fff;
+        border: 1px solid #dfe7ef;
+        border-left: 5px solid #0f766e;
+        border-radius: 8px;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, .05);
+        color: #0f172a;
+        min-height: 128px;
+        padding: 18px;
+    }
+
+    .approval-metric span,
+    .approval-metric small {
+        color: #64748b;
+        display: block;
+        font-size: .78rem;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+
+    .approval-metric strong {
+        display: block;
+        font-size: 2.3rem;
+        line-height: 1.1;
+        margin: 8px 0;
+    }
+
+    .approval-metric.gold {
+        border-left-color: #d8a030;
+    }
+
+    .approval-metric.success {
+        border-left-color: #16a34a;
+    }
+
+    .approval-metric.muted {
+        border-left-color: #64748b;
+    }
+
+    .approval-guide {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .approval-guide div {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 14px;
+    }
+
+    .approval-guide i,
+    .approval-guide strong,
+    .approval-guide span {
+        display: block;
+    }
+
+    .approval-guide i {
+        color: #0f766e;
+        font-size: 1.2rem;
+        margin-bottom: 10px;
+    }
+
+    .approval-guide span {
+        color: #64748b;
+        font-size: .82rem;
+        margin-top: 4px;
+    }
+
+    @media (max-width: 768px) {
+        .approval-guide {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
 

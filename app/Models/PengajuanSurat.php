@@ -97,7 +97,11 @@ class PengajuanSurat extends Model
         }
 
         if ($this->status === 'ditandatangani') {
-            return 'Menunggu finalisasi dokumen';
+            return 'Dokumen ditandatangani Kabid';
+        }
+
+        if ($this->status === 'selesai' && $this->posisi?->id === $this->pemohon_id) {
+            return 'Dikirim kembali ke Staff pemohon';
         }
 
         return $this->status_label;

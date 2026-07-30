@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\DigitalSignature;
 use App\Models\PengajuanSurat;
+use App\Models\RiwayatPengajuanSurat;
 use App\Models\SignatureKey;
 use App\Models\User;
 use Illuminate\Support\Facades\Storage;
@@ -32,8 +33,6 @@ class DigitalSignatureService
         $documentPayload = $this->documentPayload($pengajuanSurat);
         $documentHash = hash('sha512', $documentPayload);
         $verificationCode = $this->verificationCode();
-        $pdfBinary = $this->templateService->pdfBinary($pengajuanSurat);
-        $docxBinary = $this->templateService->docxBinary($pengajuanSurat);
         $pdfPath = 'signed-documents/'.$verificationCode.'.pdf';
         $docxPath = 'signed-documents/'.$verificationCode.'.docx';
 
@@ -50,9 +49,6 @@ class DigitalSignatureService
             throw new RuntimeException('Gagal membuat digital signature.');
         }
 
-        Storage::disk('local')->put($pdfPath, $pdfBinary);
-        Storage::disk('local')->put($docxPath, $docxBinary);
-
         $digitalSignature = DigitalSignature::create([
             'pengajuan_surat_id' => $pengajuanSurat->id,
             'signature_key_id' => $signatureKey->id,
@@ -67,6 +63,20 @@ class DigitalSignatureService
                 'payload_version' => 'template_plain_text_v1',
                 'hash_algorithm' => 'SHA-512',
                 'signature_algorithm' => 'RSA/SHA-512',
+            ],
+        ]);
+
+        $pengajuanSurat->setRelation('digitalSignature', $digitalSignature->load('signer'));
+
+        $pdfBinary = $this->templateService->pdfBinary($pengajuanSurat);
+        $docxBinary = $this->templateService->docxBinary($pengajuanSurat);
+
+        Storage::disk('local')->put($pdfPath, $pdfBinary);
+        Storage::disk('local')->put($docxPath, $docxBinary);
+
+        $digitalSignature->update([
+            'metadata' => [
+                ...($digitalSignature->metadata ?? []),
                 'file_hashes' => [
                     'pdf' => hash('sha512', $pdfBinary),
                     'docx' => hash('sha512', $docxBinary),
@@ -79,8 +89,22 @@ class DigitalSignatureService
         ]);
 
         $pengajuanSurat->update([
-            'status' => 'ditandatangani',
-            'posisi_saat_ini' => null,
+            'status' => 'selesai',
+            'posisi_saat_ini' => $pengajuanSurat->pemohon_id,
+        ]);
+
+        RiwayatPengajuanSurat::create([
+            'pengajuan_surat_id' => $pengajuanSurat->id,
+            'actor_id' => $signer->id,
+            'target_user_id' => $pengajuanSurat->pemohon_id,
+            'aksi' => 'tandatangan_kabid',
+            'status_sebelum' => 'disetujui_kabid',
+            'status_sesudah' => 'selesai',
+            'catatan' => 'Dokumen ditandatangani digital oleh Kabid dan dikirim kembali ke Staff pemohon.',
+            'metadata' => [
+                'actor_role' => $signer->role,
+                'verification_code' => $verificationCode,
+            ],
         ]);
 
         return $digitalSignature;
@@ -157,7 +181,7 @@ class DigitalSignatureService
     {
         $pengajuanSurat->loadMissing(['jenisSurat', 'pemohon']);
 
-        return implode("\n", $this->templateService->plainText($pengajuanSurat));
+        return implode("\n", $this->templateService->canonicalPlainText($pengajuanSurat));
     }
 
     private function verificationCode(): string

@@ -8,7 +8,7 @@
         <div class="request-overview mb-4">
             <div class="section-kicker">Pengajuan Baru</div>
             <h4 class="mb-1 fw-bold text-dark">Buat Pengajuan Surat</h4>
-            <p class="text-muted mb-0">Pilih jenis surat, lengkapi persyaratan, lalu sistem menyiapkan template awal.</p>
+            <p class="text-muted mb-0">Pilih jenis surat, lengkapi data sesuai template resmi, lalu sistem menyiapkan preview dan unduhan final.</p>
         </div>
 
         <div class="process-strip mb-4">
@@ -22,7 +22,7 @@
             </div>
             <div class="process-step">
                 <span>3</span>
-                <strong>Preview template</strong>
+                <strong>Preview dokumen</strong>
             </div>
         </div>
 
@@ -59,7 +59,7 @@
                             </option>
                             @endforeach
                         </select>
-                        <div class="form-text">Field persyaratan akan menyesuaikan jenis surat yang dipilih.</div>
+                        <div class="form-text">Field persyaratan mengikuti file template yang sudah disediakan.</div>
                     </div>
 
                     <div class="mb-4">
@@ -173,6 +173,14 @@ $oldFields = old('fields', []);
                         <p class="text-muted small mb-0">${definition.summary}</p>
                     </div>
                 </div>
+                <div class="template-source">
+                    <div class="template-source-icon"><i class="fas fa-file-word"></i></div>
+                    <div>
+                        <span>Template digunakan</span>
+                        <strong>${escapeHtml(definition.template_label || 'Template sistem')}</strong>
+                        <p>${escapeHtml(definition.template_note || 'Data yang diisi akan mengikuti struktur template ini.')}</p>
+                    </div>
+                </div>
                 <div class="row g-3 p-3">${fields}</div>`;
         }
 
@@ -270,6 +278,50 @@ $oldFields = old('fields', []);
         color: #0f766e;
         font-size: 2rem;
         opacity: .8;
+    }
+
+    .template-source {
+        align-items: center;
+        background: #f0fdf4;
+        border-bottom: 1px solid #d1fae5;
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 42px 1fr;
+        padding: 14px 18px;
+    }
+
+    .template-source-icon {
+        align-items: center;
+        background: #fff;
+        border: 1px solid #bbf7d0;
+        border-radius: 8px;
+        color: #0f766e;
+        display: flex;
+        height: 42px;
+        justify-content: center;
+        width: 42px;
+    }
+
+    .template-source span {
+        color: #0f766e;
+        display: block;
+        font-size: .68rem;
+        font-weight: 900;
+        letter-spacing: .1em;
+        text-transform: uppercase;
+    }
+
+    .template-source strong {
+        color: #064e3b;
+        display: block;
+        font-size: .9rem;
+        line-height: 1.25;
+    }
+
+    .template-source p {
+        color: #475569;
+        font-size: .8rem;
+        margin: 2px 0 0;
     }
 
     @media (max-width: 768px) {

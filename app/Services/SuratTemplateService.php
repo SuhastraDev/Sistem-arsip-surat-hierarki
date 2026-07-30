@@ -16,23 +16,31 @@ class SuratTemplateService
         return [
             'surat-cuti' => [
                 'title' => 'Surat Cuti',
-                'summary' => 'Lengkapi data cuti pegawai, periode, alasan, dan alamat selama cuti.',
+                'summary' => 'Mengikuti formulir permintaan dan pemberian cuti BKN yang disediakan.',
+                'template_label' => 'SURAT CUTII_GUSTI_2026.docx',
+                'template_note' => 'Template resmi cuti: data pegawai, jenis cuti, alasan, alamat, dan pertimbangan atasan.',
                 'fields' => [
                     'nama_pegawai' => ['label' => 'Nama pegawai', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: Mas Asep'],
+                    'nip' => ['label' => 'NIP', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: 19870512 201001 1 002'],
                     'jabatan_unit' => ['label' => 'Jabatan / unit kerja', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: Staf Administrasi - Seksi Rehabilitasi Hutan'],
+                    'masa_kerja' => ['label' => 'Masa kerja', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: 12 tahun 4 bulan'],
+                    'unit_kerja' => ['label' => 'Unit kerja', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: Dinas Kehutanan Provinsi Sumatera Selatan'],
                     'jenis_cuti' => ['label' => 'Jenis cuti', 'type' => 'select', 'required' => true, 'options' => ['Cuti tahunan', 'Cuti sakit', 'Cuti melahirkan', 'Cuti alasan penting']],
                     'tanggal_mulai' => ['label' => 'Tanggal mulai', 'type' => 'date', 'required' => true],
                     'tanggal_selesai' => ['label' => 'Tanggal selesai', 'type' => 'date', 'required' => true],
                     'lama_cuti' => ['label' => 'Lama cuti', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: 5 hari kerja'],
                     'alasan' => ['label' => 'Alasan cuti', 'type' => 'textarea', 'required' => true, 'placeholder' => 'Contoh: Keperluan keluarga di luar kota'],
                     'alamat_selama_cuti' => ['label' => 'Alamat selama cuti', 'type' => 'textarea', 'required' => true, 'placeholder' => 'Contoh: Jl. Merdeka No. 10, Bandung'],
+                    'telepon' => ['label' => 'Telepon', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: 0812-3456-7890'],
                     'atasan_langsung' => ['label' => 'Atasan langsung', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: Ibu Siti - Kasi Rehabilitasi Hutan'],
                     'lampiran' => ['label' => 'Lampiran', 'type' => 'text', 'required' => false, 'placeholder' => 'Contoh: Surat dokter / dokumen pendukung, jika ada'],
                 ],
             ],
             'surat-tugas' => [
                 'title' => 'Surat Tugas',
-                'summary' => 'Lengkapi data pegawai, lokasi, periode, dasar, dan uraian tugas.',
+                'summary' => 'Mengikuti template Surat Perintah Tugas yang disediakan.',
+                'template_label' => 'SPT Bappeda 27 sd 31 Juli 2026.doc',
+                'template_note' => 'Template resmi SPT: dasar penugasan, pegawai, lokasi, periode, dan uraian tugas.',
                 'fields' => [
                     'pegawai_ditugaskan' => ['label' => 'Pegawai ditugaskan', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: Mas Asep, Mba Dewi'],
                     'jabatan_unit' => ['label' => 'Jabatan / unit kerja', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: Staf Lapangan - Bidang Konservasi'],
@@ -48,7 +56,9 @@ class SuratTemplateService
             ],
             'nota-dinas' => [
                 'title' => 'Nota Dinas',
-                'summary' => 'Lengkapi tujuan nota, unit pengaju, isi ringkas, prioritas, dan catatan.',
+                'summary' => 'Mengikuti contoh Nota Dinas IKK Februari 2026 yang disediakan.',
+                'template_label' => 'Nota Dinas_IKK Februari 2026.pdf',
+                'template_note' => 'Template resmi nota dinas: tujuan, perihal, isi ringkas, prioritas, dan lampiran.',
                 'fields' => [
                     'perihal_nota' => ['label' => 'Perihal', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: Koordinasi pelaksanaan kegiatan rehabilitasi'],
                     'tujuan_penerima' => ['label' => 'Tujuan / penerima', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: Kepala Seksi Rehabilitasi Hutan'],
@@ -77,6 +87,15 @@ class SuratTemplateService
     public function fields(string $slug): array
     {
         return $this->definitions()[$slug]['fields'] ?? [];
+    }
+
+    public function definition(string $slug): array
+    {
+        return $this->definitions()[$slug] ?? [
+            'title' => 'Surat',
+            'summary' => 'Template surat sistem.',
+            'fields' => [],
+        ];
     }
 
     public function cleanFields(string $slug, array $input): array
@@ -137,11 +156,14 @@ class SuratTemplateService
         return $this->makeSimpleDocx($this->plainText($pengajuanSurat));
     }
 
-    public function plainText(PengajuanSurat $pengajuanSurat): array
+    public function canonicalPlainText(PengajuanSurat $pengajuanSurat): array
     {
+        $definition = $this->definition($pengajuanSurat->jenisSurat->slug);
+
         $lines = [
             strtoupper($pengajuanSurat->jenisSurat->nama),
             'Nomor Pengajuan: '.$pengajuanSurat->nomor_pengajuan,
+            'Template sumber: '.($definition['template_label'] ?? 'Template sistem'),
             'Tanggal: '.$pengajuanSurat->tanggal_pengajuan->format('d/m/Y'),
             'Pemohon: '.$pengajuanSurat->pemohon->name,
             'Perihal: '.$pengajuanSurat->perihal,
@@ -157,6 +179,30 @@ class SuratTemplateService
         $lines[] = 'Dokumen final dapat diverifikasi melalui kode verifikasi setelah ditandatangani.';
 
         return $lines;
+    }
+
+    public function plainText(PengajuanSurat $pengajuanSurat): array
+    {
+        $pengajuanSurat->loadMissing(['digitalSignature.signer']);
+        $lines = $this->canonicalPlainText($pengajuanSurat);
+
+        if (! $pengajuanSurat->digitalSignature) {
+            return $lines;
+        }
+
+        $signature = $pengajuanSurat->digitalSignature;
+
+        return [
+            ...$lines,
+            '',
+            'PENGESAHAN DIGITAL',
+            'Status: Dokumen final telah ditandatangani dan dikirim kembali ke Staff pemohon.',
+            'Penandatangan: '.$signature->signer->name.' ('.$signature->signer->jabatan.')',
+            'Waktu tanda tangan: '.$signature->signed_at->format('d/m/Y H:i').' WIB',
+            'Algoritma: '.$signature->algorithm,
+            'Kode verifikasi: '.$signature->verification_code,
+            'Halaman verifikasi: '.route('verification.show', $signature->verification_code),
+        ];
     }
 
     private function storedSignedArtifact(PengajuanSurat $pengajuanSurat, string $format): ?string

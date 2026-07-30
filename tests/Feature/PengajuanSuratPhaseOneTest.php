@@ -96,6 +96,32 @@ class PengajuanSuratPhaseOneTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_kabid_uses_pengajuan_workspace_instead_of_legacy_surat_modules(): void
+    {
+        $this->seed();
+
+        $kabid = User::where('role', 'kabid')->firstOrFail();
+
+        $this->actingAs($kabid)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Meja Approval')
+            ->assertDontSee('Monitoring Surat Masuk')
+            ->assertDontSee('Surat Keluar');
+
+        $this->actingAs($kabid)
+            ->get(route('surat-masuk.index'))
+            ->assertForbidden();
+
+        $this->actingAs($kabid)
+            ->get(route('surat-keluar.index'))
+            ->assertForbidden();
+
+        $this->actingAs($kabid)
+            ->get(route('disposisi.index'))
+            ->assertForbidden();
+    }
+
     public function test_staff_can_preview_and_export_pengajuan_template(): void
     {
         $this->seed();
@@ -198,10 +224,24 @@ class PengajuanSuratPhaseOneTest extends TestCase
             ->assertOk()
             ->assertSee($signature->verification_code);
 
+        $this->actingAs($staff)
+            ->get(route('pengajuan-surat.preview', $pengajuan))
+            ->assertOk()
+            ->assertSee('Pengesahan Digital')
+            ->assertSee($signature->verification_code);
+
         $this->assertDatabaseHas('pengajuan_surats', [
             'id' => $pengajuan->id,
-            'status' => 'ditandatangani',
-            'posisi_saat_ini' => null,
+            'status' => 'selesai',
+            'posisi_saat_ini' => $staff->id,
+        ]);
+
+        $this->assertDatabaseHas('riwayat_pengajuan_surats', [
+            'pengajuan_surat_id' => $pengajuan->id,
+            'actor_id' => $kabid->id,
+            'target_user_id' => $staff->id,
+            'aksi' => 'tandatangan_kabid',
+            'status_sesudah' => 'selesai',
         ]);
     }
 

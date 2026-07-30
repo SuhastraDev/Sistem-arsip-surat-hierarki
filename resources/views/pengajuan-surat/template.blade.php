@@ -62,6 +62,19 @@
             margin-top: 4px;
         }
 
+        .template-origin {
+            background: #f8fafc;
+            border: 1px solid #dbe5ef;
+            color: #334155;
+            font-size: 12px;
+            margin: -8px 0 22px;
+            padding: 10px 12px;
+        }
+
+        .template-origin strong {
+            color: #0f766e;
+        }
+
         .meta,
         .requirements {
             border-collapse: collapse;
@@ -105,6 +118,43 @@
             border-bottom: 1px solid #111827;
             height: 76px;
             margin-bottom: 8px;
+        }
+
+        .digital-seal {
+            border: 1px solid #bbf7d0;
+            background: #f0fdf4;
+            display: grid;
+            gap: 14px;
+            grid-template-columns: 112px 1fr;
+            margin-top: 32px;
+            padding: 14px;
+        }
+
+        .digital-seal img {
+            border: 1px solid #d1fae5;
+            display: block;
+            height: 112px;
+            width: 112px;
+        }
+
+        .digital-seal-label {
+            color: #166534;
+            font-size: 11px;
+            font-weight: bold;
+            letter-spacing: .12em;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .digital-seal code {
+            background: #fff;
+            border: 1px solid #bbf7d0;
+            color: #166534;
+            display: inline-block;
+            font-size: 11px;
+            font-weight: bold;
+            margin: 4px 0;
+            padding: 4px 7px;
         }
 
         .toolbar {
@@ -204,6 +254,10 @@
             <div>Nomor pengajuan: {{ $pengajuanSurat->nomor_pengajuan }}</div>
         </section>
 
+        <div class="template-origin">
+            Template sumber: <strong>{{ $templateDefinition['template_label'] ?? ($pengajuanSurat->metadata['template_source'] ?? 'Template sistem') }}</strong>
+        </div>
+
         <table class="meta">
             <tr>
                 <td>Tanggal pengajuan</td>
@@ -233,16 +287,38 @@
             @endforeach
         </table>
 
+        @if($pengajuanSurat->digitalSignature)
+        @php
+        $signature = $pengajuanSurat->digitalSignature;
+        $verificationUrl = route('verification.show', $signature->verification_code);
+        @endphp
+        <section class="digital-seal">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=112x112&data={{ urlencode($verificationUrl) }}" alt="QR verifikasi {{ $signature->verification_code }}">
+            <div>
+                <div class="digital-seal-label">Pengesahan Digital</div>
+                <strong>Ditandatangani oleh {{ $signature->signer->name }}</strong><br>
+                <span>{{ $signature->signer->jabatan }} • {{ $signature->signed_at->format('d/m/Y H:i') }} WIB</span><br>
+                <code>{{ $signature->verification_code }}</code>
+                <p style="font-size: 12px; margin: 4px 0 0;">
+                    Scan QR pada preview web atau gunakan kode verifikasi di PDF/DOCX untuk memastikan dokumen sama dengan arsip final sistem.
+                </p>
+            </div>
+        </section>
+        @else
         <p class="body-copy">
-            Dokumen ini merupakan template awal. Proses persetujuan, tanda tangan digital,
-            dan QR code verifikasi akan dilengkapi pada fase implementasi berikutnya.
+            Dokumen ini mengikuti template resmi yang disediakan dan akan dilengkapi tanda tangan digital serta kode verifikasi setelah disetujui Kabid.
         </p>
+        @endif
 
         <section class="signature-space">
             <div class="signature-box">
                 <div>Kepala Bidang</div>
-                <div class="signature-line"></div>
-                <strong>________________________</strong>
+                <div class="signature-line">
+                    @if($pengajuanSurat->digitalSignature)
+                    <div style="padding-top: 24px; color: #166534; font-weight: bold;">Signed digitally</div>
+                    @endif
+                </div>
+                <strong>{{ $pengajuanSurat->digitalSignature?->signer->name ?? '________________________' }}</strong>
             </div>
         </section>
     </main>

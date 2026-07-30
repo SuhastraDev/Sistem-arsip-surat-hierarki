@@ -82,6 +82,7 @@ class PengajuanSuratController extends Controller
         ]);
 
         $jenisSurat = JenisSurat::findOrFail($baseData['jenis_surat_id']);
+        $templateDefinition = $this->templateService->definition($jenisSurat->slug);
         $fieldData = $request->validate($this->templateService->validationRules($jenisSurat->slug));
         $cleanFields = $this->templateService->cleanFields($jenisSurat->slug, $fieldData['fields'] ?? []);
         $posisiAwal = $this->resolvePosisiAwal();
@@ -103,8 +104,9 @@ class PengajuanSuratController extends Controller
             'metadata' => [
                 'fase' => 'fase_2',
                 'form_data' => $cleanFields,
+                'template_source' => $templateDefinition['template_label'] ?? 'Template sistem',
                 'template_format' => ['pdf', 'docx'],
-                'catatan' => 'Form persyaratan dan preview dokumen sudah tersedia. Output unduhan disediakan dalam PDF dan DOCX.',
+                'catatan' => 'Form persyaratan mengikuti template resmi yang disediakan. Output unduhan disediakan dalam PDF dan DOCX.',
             ],
         ]);
 
@@ -138,8 +140,9 @@ class PengajuanSuratController extends Controller
         abort_unless($isAllowed, 403);
 
         $templateRows = $this->templateService->templateRows($pengajuanSurat);
+        $templateDefinition = $this->templateService->definition($pengajuanSurat->jenisSurat->slug);
 
-        return view('pengajuan-surat.show', compact('pengajuanSurat', 'templateRows'));
+        return view('pengajuan-surat.show', compact('pengajuanSurat', 'templateRows', 'templateDefinition'));
     }
 
     public function sign(PengajuanSurat $pengajuanSurat)
@@ -152,7 +155,7 @@ class PengajuanSuratController extends Controller
             return back()->with('error', $exception->getMessage());
         }
 
-        return back()->with('success', 'Dokumen berhasil ditandatangani secara digital.');
+        return back()->with('success', 'Dokumen berhasil ditandatangani. Preview web menampilkan QR, PDF/DOCX berisi kode verifikasi, dan hasil final dikirim kembali ke Staff pemohon.');
     }
 
     public function process(Request $request, PengajuanSurat $pengajuanSurat)
@@ -175,12 +178,13 @@ class PengajuanSuratController extends Controller
 
     public function preview(PengajuanSurat $pengajuanSurat)
     {
-        $pengajuanSurat->load(['jenisSurat', 'pemohon', 'posisi']);
+        $pengajuanSurat->load(['jenisSurat', 'pemohon', 'posisi', 'digitalSignature.signer']);
         $this->authorizeView($pengajuanSurat);
 
         return view('pengajuan-surat.template', [
             'pengajuanSurat' => $pengajuanSurat,
             'rows' => $this->templateService->templateRows($pengajuanSurat),
+            'templateDefinition' => $this->templateService->definition($pengajuanSurat->jenisSurat->slug),
             'isEmbed' => request()->boolean('embed'),
             'isPrint' => false,
         ]);
@@ -188,7 +192,7 @@ class PengajuanSuratController extends Controller
 
     public function export(PengajuanSurat $pengajuanSurat, string $format)
     {
-        $pengajuanSurat->load(['jenisSurat', 'pemohon', 'posisi']);
+        $pengajuanSurat->load(['jenisSurat', 'pemohon', 'posisi', 'digitalSignature.signer']);
         $this->authorizeView($pengajuanSurat);
 
         return match ($format) {

@@ -35,17 +35,11 @@ $steps = [
         'description' => 'Pengajuan disetujui final sebelum tanda tangan.',
         'icon' => 'fas fa-stamp',
     ],
-    'ditandatangani' => [
-        'label' => 'Ditandatangani',
-        'owner' => 'Kabid',
-        'description' => 'Dokumen final ditandatangani secara digital.',
-        'icon' => 'fas fa-signature',
-    ],
     'selesai' => [
-        'label' => 'Selesai',
-        'owner' => 'Sistem',
-        'description' => 'Dokumen final tersedia untuk unduh dan verifikasi.',
-        'icon' => 'fas fa-box-archive',
+        'label' => 'TTD & Kembali ke Staff',
+        'owner' => 'Kabid',
+        'description' => 'Kabid menandatangani dokumen, sistem memasukkan QR/kode verifikasi, lalu hasil kembali ke Staff pemohon.',
+        'icon' => 'fas fa-qrcode',
     ],
 ];
 $keys = array_keys($steps);
@@ -62,6 +56,25 @@ $verificationUrl = $verificationCode ? route('verification.show', $verificationC
 @endif
 @if(session('error'))
 <div class="alert alert-danger">{{ session('error') }}</div>
+@endif
+@if($pengajuanSurat->status === 'selesai')
+<div class="alert alert-success">
+    <strong>Dokumen final sudah kembali ke Staff pemohon.</strong>
+    Preview web menampilkan QR verifikasi. PDF/DOCX final berisi tanda tangan digital dan kode verifikasi.
+</div>
+@endif
+@if(Auth::user()->role === 'kabid' && $pengajuanSurat->status === 'disetujui_kabid' && ! $pengajuanSurat->digitalSignature)
+<div class="kabid-sign-guide mb-3">
+    <div class="guide-marker"><i class="fas fa-pen-nib"></i></div>
+    <div>
+        <span>Meja Kabid</span>
+        <strong>Langkah berikutnya: tandatangani dokumen final</strong>
+        <p>Buka preview untuk cek isi surat. Setelah tombol tanda tangan ditekan, sistem membuat kode verifikasi dan mengirim hasil final kembali ke Staff pemohon.</p>
+    </div>
+    <button type="button" class="btn btn-light border" data-bs-toggle="modal" data-bs-target="#documentPreviewModal">
+        <i class="fas fa-eye me-1"></i>Cek Dokumen
+    </button>
+</div>
 @endif
 
 <div class="row">
@@ -105,6 +118,16 @@ $verificationUrl = $verificationCode ? route('verification.show', $verificationC
                     <div class="col-md-6">
                         <div class="text-muted small">Catatan Fase</div>
                         <div class="fw-semibold">{{ $pengajuanSurat->metadata['catatan'] ?? '-' }}</div>
+                    </div>
+                    <div class="col-12">
+                        <div class="template-origin">
+                            <i class="fas fa-file-word"></i>
+                            <div>
+                                <span>Template sumber</span>
+                                <strong>{{ $templateDefinition['template_label'] ?? ($pengajuanSurat->metadata['template_source'] ?? 'Template sistem') }}</strong>
+                                <small>{{ $templateDefinition['template_note'] ?? 'Data pengajuan mengikuti template surat yang aktif.' }}</small>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -163,7 +186,7 @@ $verificationUrl = $verificationCode ? route('verification.show', $verificationC
             <div class="detail-panel-header d-flex flex-column flex-md-row justify-content-between gap-3">
                 <div>
                     <strong><i class="fas fa-file-contract me-2 text-primary"></i>Data Persyaratan</strong>
-                    <div class="small text-muted mt-1">Preview dokumen tampil dalam modal. Unduh PDF atau DOCX setelah dicek.</div>
+                    <div class="small text-muted mt-1">Preview dokumen tampil dalam modal. Setelah Kabid tanda tangan, preview menampilkan QR dan file unduhan membawa kode verifikasi.</div>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
                     <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#documentPreviewModal">
@@ -184,14 +207,14 @@ $verificationUrl = $verificationCode ? route('verification.show', $verificationC
         <div class="detail-panel mb-3">
             <div class="detail-panel-header d-flex flex-column flex-md-row justify-content-between gap-3">
                 <div>
-                    <strong><i class="fas fa-signature me-2 text-primary"></i>Digital Signature</strong>
-                    <div class="small text-muted mt-1">Tanda tangan digital memakai hash SHA-512 dan RSA milik Kabid.</div>
+                    <strong><i class="fas fa-signature me-2 text-primary"></i>Tanda Tangan & Verifikasi</strong>
+                    <div class="small text-muted mt-1">Kabid menandatangani dokumen, lalu sistem otomatis mengembalikan hasil final ke Staff pemohon.</div>
                 </div>
                 @if(Auth::user()->role === 'kabid' && $pengajuanSurat->status === 'disetujui_kabid' && ! $pengajuanSurat->digitalSignature)
                 <form action="{{ route('pengajuan-surat.sign', $pengajuanSurat) }}" method="POST">
                     @csrf
-                    <button class="btn btn-sm btn-primary" onclick="return confirm('Tandatangani dokumen ini secara digital?');">
-                        <i class="fas fa-pen-nib me-1"></i>Tandatangani
+                    <button class="btn btn-sm btn-primary" onclick="return confirm('Tandatangani dokumen dan kirim hasil final ke Staff pemohon?');">
+                        <i class="fas fa-pen-nib me-1"></i>Tandatangani & Kirim ke Staff
                     </button>
                 </form>
                 @endif
@@ -201,7 +224,7 @@ $verificationUrl = $verificationCode ? route('verification.show', $verificationC
                 <div class="signature-state signed">
                     <i class="fas fa-circle-check"></i>
                     <div>
-                        <strong>Dokumen sudah ditandatangani</strong>
+                        <strong>Dokumen final sudah ditandatangani dan dikirim ke Staff</strong>
                         <span>Oleh {{ $pengajuanSurat->digitalSignature->signer->name }} pada {{ $pengajuanSurat->digitalSignature->signed_at->format('d/m/Y H:i') }} WIB</span>
                     </div>
                 </div>
@@ -223,7 +246,7 @@ $verificationUrl = $verificationCode ? route('verification.show', $verificationC
                     <div>
                         <span class="verification-kicker">Kode Verifikasi</span>
                         <code>{{ $verificationCode }}</code>
-                        <p class="small text-muted mb-2">Scan QR atau buka halaman verifikasi untuk memastikan tanda tangan dan file final PDF/DOCX masih cocok.</p>
+                        <p class="small text-muted mb-2">QR tampil di preview web. Kode verifikasi ikut tercetak di PDF/DOCX final.</p>
                         <a href="{{ $verificationUrl }}" class="btn btn-sm btn-outline-success">
                             <i class="fas fa-shield-halved me-1"></i>Buka Verifikasi
                         </a>
@@ -235,7 +258,7 @@ $verificationUrl = $verificationCode ? route('verification.show', $verificationC
                     <i class="fas fa-clock"></i>
                     <div>
                         <strong>Belum ditandatangani</strong>
-                        <span>Tombol tanda tangan akan aktif untuk Kabid setelah status menjadi Disetujui Kabid.</span>
+                        <span>Tombol tanda tangan aktif untuk Kabid setelah status menjadi Disetujui Kabid.</span>
                     </div>
                 </div>
                 @endif
@@ -300,8 +323,8 @@ $verificationUrl = $verificationCode ? route('verification.show', $verificationC
                 <strong><i class="fas fa-info-circle me-2 text-primary"></i>Catatan Alur</strong>
             </div>
             <div class="p-3">
-                <p class="small text-muted mb-3">
-                    Status bergerak dari Staff ke Kasi, lalu Kabid. Setelah Kabid menyetujui final, tombol tanda tangan digital akan aktif untuk Kabid.
+        <p class="small text-muted mb-3">
+                    Status bergerak dari Staff ke Kasi, lalu Kabid. Setelah Kabid menandatangani, dokumen final otomatis kembali ke Staff pemohon dan bisa diverifikasi memakai QR atau kode.
                 </p>
                 <a href="{{ route('pengajuan-surat.index') }}" class="btn btn-light border w-100">
                     <i class="fas fa-arrow-left me-2"></i>Kembali
@@ -391,6 +414,84 @@ $verificationUrl = $verificationCode ? route('verification.show', $verificationC
         background: #f8fafc;
         border-bottom: 1px solid #e7edf3;
         padding: 16px 18px;
+    }
+
+    .kabid-sign-guide {
+        align-items: center;
+        background: linear-gradient(135deg, #064e3b, #0f766e);
+        border-radius: 8px;
+        box-shadow: 0 14px 32px rgba(15, 118, 110, .18);
+        color: #fff;
+        display: grid;
+        gap: 14px;
+        grid-template-columns: 48px 1fr auto;
+        padding: 16px;
+    }
+
+    .guide-marker {
+        align-items: center;
+        background: rgba(255, 255, 255, .14);
+        border: 1px solid rgba(255, 255, 255, .25);
+        border-radius: 8px;
+        display: flex;
+        height: 48px;
+        justify-content: center;
+        width: 48px;
+    }
+
+    .kabid-sign-guide span {
+        color: #a7f3d0;
+        display: block;
+        font-size: .68rem;
+        font-weight: 900;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+    }
+
+    .kabid-sign-guide strong {
+        display: block;
+        font-size: 1rem;
+    }
+
+    .kabid-sign-guide p {
+        color: #d1fae5;
+        font-size: .84rem;
+        margin: 2px 0 0;
+    }
+
+    .template-origin {
+        align-items: center;
+        background: #f8fafc;
+        border: 1px dashed #99f6e4;
+        border-radius: 8px;
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 40px 1fr;
+        padding: 12px;
+    }
+
+    .template-origin i {
+        align-items: center;
+        background: #ecfdf5;
+        border-radius: 8px;
+        color: #0f766e;
+        display: flex;
+        height: 40px;
+        justify-content: center;
+        width: 40px;
+    }
+
+    .template-origin span,
+    .template-origin small {
+        color: #64748b;
+        display: block;
+        font-size: .75rem;
+    }
+
+    .template-origin strong {
+        color: #064e3b;
+        display: block;
+        font-size: .92rem;
     }
 
     .stage-chip {
@@ -767,6 +868,10 @@ $verificationUrl = $verificationCode ? route('verification.show', $verificationC
         }
 
         .verification-box {
+            grid-template-columns: 1fr;
+        }
+
+        .kabid-sign-guide {
             grid-template-columns: 1fr;
         }
 

@@ -13,6 +13,8 @@ class SuratKeluarController extends Controller
 {
     public function index(Request $request)
     {
+        $this->ensureLegacyAllowed();
+
         $user = Auth::user();
 
         // Load relasi 'pembuat' dan 'posisi' agar efisien
@@ -145,11 +147,15 @@ class SuratKeluarController extends Controller
 
     public function create()
     {
+        $this->ensureLegacyAllowed();
+
         return view('surat-keluar.create');
     }
 
     public function store(Request $request)
     {
+        $this->ensureLegacyAllowed();
+
         $request->validate([
             'file_surat' => 'required|mimes:pdf,doc,docx|max:20480', // Max 20MB
             'kategori' => 'required',
@@ -188,6 +194,8 @@ class SuratKeluarController extends Controller
 
     public function show($id)
     {
+        $this->ensureLegacyAllowed();
+
         // Load relasi logs dengan user pengirim/penerima
         $surat = SuratKeluar::with(['logs.pengirim', 'logs.penerima', 'pembuat', 'posisi'])->findOrFail($id);
         $user = Auth::user();
@@ -217,6 +225,8 @@ class SuratKeluarController extends Controller
 
     public function update(Request $request, $id)
     {
+        $this->ensureLegacyAllowed();
+
         $surat = SuratKeluar::findOrFail($id);
         $user = Auth::user();
 
@@ -318,5 +328,10 @@ class SuratKeluarController extends Controller
 
             return back()->with('success', 'Surat telah DITOLAK secara permanen.');
         }
+    }
+
+    private function ensureLegacyAllowed(): void
+    {
+        abort_if(in_array(Auth::user()->role, ['kabid', 'kasi'], true), 403, 'Modul lama sudah diganti oleh Pengajuan Surat.');
     }
 }

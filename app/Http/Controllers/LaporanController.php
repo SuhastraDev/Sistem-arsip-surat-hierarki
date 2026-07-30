@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\SuratMasuk;
 use App\Models\SuratKeluar;
 use App\Models\DisposisiSurat;
+use App\Models\PengajuanSurat;
 use App\Models\User;
 
 class LaporanController extends Controller
@@ -32,6 +33,27 @@ class LaporanController extends Controller
         $sm_pending_kabid = 0;
         $sm_pending_kasi = 0;
         $sm_pending_staf = 0;
+
+        if (in_array($user->role, ['kabid', 'kasi'])) {
+            $pengajuan_aktif = PengajuanSurat::where('posisi_saat_ini', $user->id)->count();
+            $pengajuan_siap_ttd = $user->role === 'kabid'
+                ? PengajuanSurat::where('posisi_saat_ini', $user->id)->where('status', 'disetujui_kabid')->count()
+                : 0;
+            $pengajuan_selesai = PengajuanSurat::where('status', 'selesai')
+                ->whereHas('riwayat', fn ($query) => $query->where('actor_id', $user->id))
+                ->count();
+            $pengajuan_revisi = PengajuanSurat::whereHas('riwayat', function ($query) use ($user): void {
+                $query->where('actor_id', $user->id)->whereIn('aksi', ['revisi_kasi', 'revisi_kabid', 'ditolak_kasi', 'ditolak_kabid']);
+            })->count();
+
+            return view('dashboard.index', compact(
+                'pengajuan_aktif',
+                'pengajuan_siap_ttd',
+                'pengajuan_selesai',
+                'pengajuan_revisi',
+                'total_user'
+            ));
+        }
 
         // =========================================================
         // SKENARIO 1: ADMIN (ADMIN LIHAT RINCIAN POSISI)

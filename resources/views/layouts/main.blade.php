@@ -611,8 +611,8 @@
             </a>
             @endif
 
-            @if(in_array(Auth::user()->role, ['staff', 'kabid', 'kasi']))
-            <div class="menu-label">Tugas & Disposisi</div>
+            @if(Auth::user()->role === 'staff')
+            <div class="menu-label">Tugas Staff</div>
 
             @php
             $countInbox = \App\Models\DisposisiSurat::where('penerima_id', Auth::id())->where('is_read', 0)->count();
@@ -634,7 +634,7 @@
 
             if(Auth::user()->role == 'staff') {
             $notifCount = \App\Models\PengajuanSurat::where('pemohon_id', Auth::id())
-            ->whereIn('status', ['draft', 'ditolak'])
+            ->whereIn('status', ['draft', 'ditolak', 'selesai'])
             ->count();
             $notifColor = 'warning';
             }

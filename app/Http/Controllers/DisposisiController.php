@@ -12,6 +12,8 @@ class DisposisiController extends Controller
     // 1. INBOX (Kotak Masuk Disposisi Saya)
     public function index(Request $request)
     {
+        $this->ensureLegacyAllowed();
+
         // Ambil disposisi KHUSUS untuk user yang login
         $query = \App\Models\DisposisiSurat::where('penerima_id', Auth::id())->latest();
 
@@ -41,6 +43,8 @@ class DisposisiController extends Controller
     // 2. BACA DETAIL & BUKA KUNCI TOMBOL (Mark as Read)
     public function show($id)
     {
+        $this->ensureLegacyAllowed();
+
         $disposisi = DisposisiSurat::findOrFail($id);
 
         // Pastikan yang buka adalah penerima yang sah
@@ -76,6 +80,8 @@ class DisposisiController extends Controller
     // 3. KIRIM DISPOSISI KE BAWAHAN
     public function update(Request $request, $id)
     {
+        $this->ensureLegacyAllowed();
+
         // 1. Validasi input harus Array
         $request->validate([
             'tujuan_id' => 'required|array', // Wajib array
@@ -125,5 +131,10 @@ class DisposisiController extends Controller
         $jumlahPenerima = count($request->tujuan_id);
         return redirect()->route('disposisi.index')
             ->with('success', "Disposisi diteruskan ke $jumlahPenerima orang. Posisi surat diperbarui.");
+    }
+
+    private function ensureLegacyAllowed(): void
+    {
+        abort_if(in_array(Auth::user()->role, ['kabid', 'kasi'], true), 403, 'Modul lama sudah diganti oleh Pengajuan Surat.');
     }
 }

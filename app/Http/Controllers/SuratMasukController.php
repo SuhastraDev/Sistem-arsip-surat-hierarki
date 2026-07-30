@@ -14,6 +14,8 @@ class SuratMasukController extends Controller
     // 1. TAMPILKAN DAFTAR SURAT (Untuk Admin & Pimpinan melihat)
     public function index(Request $request)
     {
+        $this->ensureLegacyAllowed();
+
         $query = SuratMasuk::latest();
 
         // --- FILTER DARI DASHBOARD (ADMIN) ---
@@ -69,11 +71,15 @@ class SuratMasukController extends Controller
     // 2. TAMPILKAN FORM TAMBAH (Hanya Admin)
     public function create()
     {
+        $this->ensureLegacyAllowed();
+
         return view('surat-masuk.create');
     }
 
     public function show($id)
     {
+        $this->ensureLegacyAllowed();
+
         // Ambil surat beserta seluruh sejarah disposisinya
         $surat = SuratMasuk::with(['disposisi.pengirim', 'disposisi.penerima'])->findOrFail($id);
 
@@ -82,6 +88,8 @@ class SuratMasukController extends Controller
 
     public function store(Request $request)
     {
+        $this->ensureLegacyAllowed();
+
         // 1. Validasi
         $request->validate([
             'nomor_surat' => 'required|unique:surat_masuk,nomor_surat',
@@ -120,5 +128,10 @@ class SuratMasukController extends Controller
         }
 
         return redirect()->route('surat-masuk.index')->with('success', 'Surat Masuk berhasil ditambahkan dan dikirim ke Kabid!');
+    }
+
+    private function ensureLegacyAllowed(): void
+    {
+        abort_if(in_array(Auth::user()->role, ['kabid', 'kasi'], true), 403, 'Modul lama sudah diganti oleh Pengajuan Surat.');
     }
 }
