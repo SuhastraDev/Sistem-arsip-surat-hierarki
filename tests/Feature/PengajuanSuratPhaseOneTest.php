@@ -25,7 +25,8 @@ class PengajuanSuratPhaseOneTest extends TestCase
             ->assertOk()
             ->assertSee('Surat Cuti')
             ->assertSee('Surat Tugas')
-            ->assertSee('Nota Dinas');
+            ->assertSee('Nota Dinas')
+            ->assertSee('Surat Undangan Rapat');
     }
 
     public function test_staff_can_create_pengajuan_surat_to_kasi(): void
@@ -42,16 +43,16 @@ class PengajuanSuratPhaseOneTest extends TestCase
                 'tanggal_pengajuan' => '2026-07-24',
                 'perihal' => 'Permohonan surat tugas monitoring lapangan',
                 'fields' => [
-                    'pegawai_ditugaskan' => 'Mas Asep',
-                    'jabatan_unit' => 'Staf Lapangan',
-                    'tujuan_penugasan' => 'Monitoring kawasan hutan',
-                    'lokasi_tugas' => 'Kawasan Hutan Lindung',
-                    'tanggal_mulai' => '2026-07-25',
-                    'tanggal_selesai' => '2026-07-27',
-                    'dasar_keperluan' => 'Agenda monitoring berkala',
-                    'uraian_tugas' => 'Melakukan pencatatan kondisi lapangan',
-                    'pemberi_tugas' => 'Kepala Bidang Konservasi',
-                    'lampiran' => 'Jadwal kegiatan',
+                    'nomor_surat' => '800.1.11.1/001/ST/Dishut.III/2026',
+                    'dasar_pertama' => 'Peraturan Gubernur Sumatera Selatan Nomor 48 Tahun 2016.',
+                    'dasar_kedua' => 'Surat Kepala Bappeda Nomor 000.1.5/1517/Bappeda-IV/2026.',
+                    'pegawai_berangkat' => 'Mas Asep - NIP 199909062025211021 - Staf Lapangan',
+                    'kegiatan' => 'Monitoring kawasan hutan',
+                    'tujuan_perjalanan' => 'Kawasan Hutan Lindung',
+                    'lama_perjalanan' => '3 (tiga) hari / 25-27 Juli 2026',
+                    'keterangan_biaya' => 'Biaya dibebankan pada kegiatan terkait.',
+                    'kewajiban_laporan' => 'Membuat laporan tertulis setelah pelaksanaan tugas.',
+                    'penandatangan' => 'Kepala Bidang Konservasi',
                 ],
             ])
             ->assertRedirect(route('pengajuan-surat.index'));
@@ -66,7 +67,7 @@ class PengajuanSuratPhaseOneTest extends TestCase
         $pengajuan = PengajuanSurat::firstOrFail();
 
         $this->assertStringStartsWith('PGJ-'.now()->format('Ymd').'-', $pengajuan->nomor_pengajuan);
-        $this->assertSame('Monitoring kawasan hutan', $pengajuan->metadata['form_data']['tujuan_penugasan']);
+        $this->assertSame('Monitoring kawasan hutan', $pengajuan->metadata['form_data']['kegiatan']);
     }
 
     public function test_guest_cannot_access_pengajuan_surat(): void
@@ -135,14 +136,16 @@ class PengajuanSuratPhaseOneTest extends TestCase
                 'tanggal_pengajuan' => '2026-07-24',
                 'perihal' => 'Nota dinas koordinasi internal',
                 'fields' => [
+                    'kepada' => 'Kepala Dinas Kehutanan Provinsi Sumatera Selatan',
+                    'tembusan' => 'Sekretaris u.b Kasubbag. Perencanaan, Evaluasi dan Pelaporan',
+                    'dari' => 'Kepala Bidang Perlindungan dan KSDAE',
+                    'tanggal_nota' => '2026-07-24',
+                    'nomor_nota' => '500.0.0.0/001/ND.DISHUT/I/2026',
+                    'lampiran' => '1 (satu) berkas',
                     'perihal_nota' => 'Koordinasi internal',
-                    'tujuan_penerima' => 'Kepala Seksi',
-                    'tanggal_pengajuan_nota' => '2026-07-24',
-                    'unit_pengaju' => 'Staf Administrasi',
-                    'isi_ringkas' => 'Permohonan koordinasi tindak lanjut kegiatan.',
-                    'lampiran' => 'Daftar kegiatan',
-                    'prioritas' => 'Penting',
-                    'catatan_tambahan' => 'Perlu dibahas minggu ini',
+                    'isi_nota' => 'Permohonan koordinasi tindak lanjut kegiatan.',
+                    'rincian_lampiran' => 'Daftar kegiatan',
+                    'penandatangan' => 'Kepala Bidang Perlindungan dan KSDAE',
                 ],
             ]);
 
@@ -164,6 +167,46 @@ class PengajuanSuratPhaseOneTest extends TestCase
             ->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     }
 
+    public function test_staff_can_create_surat_undangan_from_template_folder(): void
+    {
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $jenisSurat = JenisSurat::where('slug', 'surat-undangan')->firstOrFail();
+
+        $this->actingAs($staff)
+            ->post(route('pengajuan-surat.store'), [
+                'jenis_surat_id' => $jenisSurat->id,
+                'tanggal_pengajuan' => '2026-07-30',
+                'perihal' => 'Undangan rapat koordinasi KBEP',
+                'fields' => [
+                    'nomor_surat' => '500.4.6.4/3508/Dishut.III/2026',
+                    'sifat' => 'Biasa',
+                    'lampiran' => '-',
+                    'hal' => 'Undangan Rapat',
+                    'tujuan_undangan' => "1. Kepala UPTD KPH Wilayah VIII Semendo\n2. Direktur PT. Genus Rona Hijau",
+                    'latar_belakang' => 'Dalam rangka percepatan pelaksanaan implementasi RBP REDD+ GCF Output II.',
+                    'hari_tanggal' => 'Jumat / 31 Agustus 2026',
+                    'waktu' => '10.00 WIB s.d Selesai',
+                    'tempat' => 'Zoom meeting pada tautan https://bit.ly/Ranker-KBEP',
+                    'meeting_id' => '897 5674 5132',
+                    'passcode' => '629115',
+                    'agenda' => 'Penyampaian Rencana Kerja Tenaga Ahli KBEP.',
+                    'kontak_konfirmasi' => 'I Gusti Ayu Kusuma Wardani (0813-7391-4100)',
+                    'penandatangan' => 'Drs. H. KOIMUDIN, S.H., M.M - Kepala Dinas',
+                ],
+            ])
+            ->assertRedirect(route('pengajuan-surat.index'));
+
+        $pengajuan = PengajuanSurat::where('jenis_surat_id', $jenisSurat->id)->firstOrFail();
+
+        $this->get(route('pengajuan-surat.preview', $pengajuan))
+            ->assertOk()
+            ->assertSee('Surat Undangan Rapat')
+            ->assertSee('Undangan Rapat')
+            ->assertSee('20260729080454_Surat undangan Rapat Genus Rona_31 Agustus 2026.pdf');
+    }
+
     public function test_kabid_can_digitally_sign_approved_pengajuan(): void
     {
         Storage::fake('local');
@@ -182,17 +225,17 @@ class PengajuanSuratPhaseOneTest extends TestCase
             'status' => 'disetujui_kabid',
             'posisi_saat_ini' => $kabid->id,
             'metadata' => [
-                'form_data' => [
-                    'pegawai_ditugaskan' => 'Mas Asep',
-                    'jabatan_unit' => 'Staf Lapangan',
-                    'tujuan_penugasan' => 'Monitoring kawasan',
-                    'lokasi_tugas' => 'Hutan Lindung',
-                    'tanggal_mulai' => '2026-07-25',
-                    'tanggal_selesai' => '2026-07-26',
-                    'dasar_keperluan' => 'Agenda monitoring',
-                    'uraian_tugas' => 'Melakukan pemantauan',
-                    'pemberi_tugas' => 'Kabid',
-                    'lampiran' => '-',
+                    'form_data' => [
+                    'nomor_surat' => '800.1.11.1/001/ST/Dishut.III/2026',
+                    'dasar_pertama' => 'Peraturan Gubernur Sumatera Selatan Nomor 48 Tahun 2016.',
+                    'dasar_kedua' => 'Surat Kepala Bappeda Nomor 000.1.5/1517/Bappeda-IV/2026.',
+                    'pegawai_berangkat' => 'Mas Asep - NIP 199909062025211021 - Staf Lapangan',
+                    'kegiatan' => 'Monitoring kawasan',
+                    'tujuan_perjalanan' => 'Hutan Lindung',
+                    'lama_perjalanan' => '2 (dua) hari / 25-26 Juli 2026',
+                    'keterangan_biaya' => '-',
+                    'kewajiban_laporan' => 'Melakukan pemantauan',
+                    'penandatangan' => 'Kabid',
                 ],
             ],
         ]);
@@ -263,17 +306,17 @@ class PengajuanSuratPhaseOneTest extends TestCase
             'status' => 'disetujui_kabid',
             'posisi_saat_ini' => $kabid->id,
             'metadata' => [
-                'form_data' => [
-                    'pegawai_ditugaskan' => 'Mas Asep',
-                    'jabatan_unit' => 'Staf Lapangan',
-                    'tujuan_penugasan' => 'Monitoring kawasan',
-                    'lokasi_tugas' => 'Hutan Lindung',
-                    'tanggal_mulai' => '2026-07-26',
-                    'tanggal_selesai' => '2026-07-27',
-                    'dasar_keperluan' => 'Agenda monitoring',
-                    'uraian_tugas' => 'Melakukan pemantauan',
-                    'pemberi_tugas' => 'Kabid',
-                    'lampiran' => '-',
+                    'form_data' => [
+                    'nomor_surat' => '800.1.11.1/002/ST/Dishut.III/2026',
+                    'dasar_pertama' => 'Peraturan Gubernur Sumatera Selatan Nomor 48 Tahun 2016.',
+                    'dasar_kedua' => 'Surat Kepala Bappeda Nomor 000.1.5/1517/Bappeda-IV/2026.',
+                    'pegawai_berangkat' => 'Mas Asep - NIP 199909062025211021 - Staf Lapangan',
+                    'kegiatan' => 'Monitoring kawasan',
+                    'tujuan_perjalanan' => 'Hutan Lindung',
+                    'lama_perjalanan' => '2 (dua) hari / 26-27 Juli 2026',
+                    'keterangan_biaya' => '-',
+                    'kewajiban_laporan' => 'Melakukan pemantauan',
+                    'penandatangan' => 'Kabid',
                 ],
             ],
         ]);
@@ -321,16 +364,16 @@ class PengajuanSuratPhaseOneTest extends TestCase
                 'tanggal_pengajuan' => '2026-07-25',
                 'perihal' => 'Pengajuan alur approval',
                 'fields' => [
-                    'pegawai_ditugaskan' => 'Mas Asep',
-                    'jabatan_unit' => 'Staf Lapangan',
-                    'tujuan_penugasan' => 'Monitoring kawasan',
-                    'lokasi_tugas' => 'Hutan Lindung',
-                    'tanggal_mulai' => '2026-07-26',
-                    'tanggal_selesai' => '2026-07-27',
-                    'dasar_keperluan' => 'Agenda monitoring',
-                    'uraian_tugas' => 'Melakukan pemantauan',
-                    'pemberi_tugas' => 'Kabid',
-                    'lampiran' => '-',
+                    'nomor_surat' => '800.1.11.1/003/ST/Dishut.III/2026',
+                    'dasar_pertama' => 'Peraturan Gubernur Sumatera Selatan Nomor 48 Tahun 2016.',
+                    'dasar_kedua' => 'Surat Kepala Bappeda Nomor 000.1.5/1517/Bappeda-IV/2026.',
+                    'pegawai_berangkat' => 'Mas Asep - NIP 199909062025211021 - Staf Lapangan',
+                    'kegiatan' => 'Monitoring kawasan',
+                    'tujuan_perjalanan' => 'Hutan Lindung',
+                    'lama_perjalanan' => '2 (dua) hari / 26-27 Juli 2026',
+                    'keterangan_biaya' => '-',
+                    'kewajiban_laporan' => 'Melakukan pemantauan',
+                    'penandatangan' => 'Kabid',
                 ],
             ]);
 

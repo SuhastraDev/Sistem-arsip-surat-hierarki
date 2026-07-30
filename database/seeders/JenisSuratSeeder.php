@@ -25,6 +25,11 @@ class JenisSuratSeeder extends Seeder
                 'slug' => 'nota-dinas',
                 'deskripsi' => 'Pengajuan nota dinas internal dengan perihal, tujuan, isi ringkas, prioritas, dan catatan.',
             ],
+            [
+                'nama' => 'Surat Undangan Rapat',
+                'slug' => 'surat-undangan',
+                'deskripsi' => 'Pengajuan undangan rapat dengan tujuan undangan, jadwal, tempat atau tautan rapat, agenda, dan penandatangan.',
+            ],
         ];
 
         foreach ($jenisSurats as $jenisSurat) {
