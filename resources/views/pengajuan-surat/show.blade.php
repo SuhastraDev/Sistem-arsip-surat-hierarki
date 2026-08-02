@@ -60,7 +60,7 @@ $verificationUrl = $verificationCode ? route('verification.show', $verificationC
 @if($pengajuanSurat->status === 'selesai')
 <div class="alert alert-success">
     <strong>Dokumen final sudah kembali ke Staff pemohon.</strong>
-    Preview web menampilkan QR verifikasi. PDF/DOCX final berisi tanda tangan digital dan kode verifikasi.
+    Barcode/QR verifikasi sudah ditempatkan di area TTD. PDF final membawa barcode verifikasi, DOCX membawa kode verifikasi.
 </div>
 @endif
 @if(Auth::user()->role === 'kabid' && $pengajuanSurat->status === 'disetujui_kabid' && ! $pengajuanSurat->digitalSignature)
@@ -186,7 +186,7 @@ $verificationUrl = $verificationCode ? route('verification.show', $verificationC
             <div class="detail-panel-header d-flex flex-column flex-md-row justify-content-between gap-3">
                 <div>
                     <strong><i class="fas fa-file-contract me-2 text-primary"></i>Data Persyaratan</strong>
-                    <div class="small text-muted mt-1">Preview dokumen tampil dalam modal. Setelah Kabid tanda tangan, preview menampilkan QR dan file unduhan membawa kode verifikasi.</div>
+                    <div class="small text-muted mt-1">Preview dokumen tampil dalam modal. Setelah Kabid tanda tangan, barcode/QR berada di area TTD dan PDF final membawa barcode verifikasi.</div>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
                     <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#documentPreviewModal">
@@ -246,7 +246,7 @@ $verificationUrl = $verificationCode ? route('verification.show', $verificationC
                     <div>
                         <span class="verification-kicker">Kode Verifikasi</span>
                         <code>{{ $verificationCode }}</code>
-                        <p class="small text-muted mb-2">QR tampil di preview web. Kode verifikasi ikut tercetak di PDF/DOCX final.</p>
+                        <p class="small text-muted mb-2">QR tampil di area TTD preview web. PDF final membawa barcode verifikasi di area TTD.</p>
                         <a href="{{ $verificationUrl }}" class="btn btn-sm btn-outline-success">
                             <i class="fas fa-shield-halved me-1"></i>Buka Verifikasi
                         </a>

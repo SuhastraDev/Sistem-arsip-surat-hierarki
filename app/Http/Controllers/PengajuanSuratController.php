@@ -155,7 +155,7 @@ class PengajuanSuratController extends Controller
             return back()->with('error', $exception->getMessage());
         }
 
-        return back()->with('success', 'Dokumen berhasil ditandatangani. Preview web menampilkan QR, PDF/DOCX berisi kode verifikasi, dan hasil final dikirim kembali ke Staff pemohon.');
+        return back()->with('success', 'Dokumen berhasil ditandatangani. Barcode/QR ditempatkan di area TTD, PDF final membawa barcode verifikasi, dan hasil final dikirim kembali ke Staff pemohon.');
     }
 
     public function process(Request $request, PengajuanSurat $pengajuanSurat)

@@ -261,6 +261,10 @@ class PengajuanSuratPhaseOneTest extends TestCase
         $this->assertNotNull($signature->verification_code);
         Storage::disk('local')->assertExists($signature->metadata['file_paths']['pdf']);
         Storage::disk('local')->assertExists($signature->metadata['file_paths']['docx']);
+        $signedPdf = Storage::disk('local')->get($signature->metadata['file_paths']['pdf']);
+
+        $this->assertStringContainsString('Scan barcode', $signedPdf);
+        $this->assertStringContainsString($signature->verification_code, $signedPdf);
 
         $this->actingAs($kabid)
             ->get(route('pengajuan-surat.show', $pengajuan))
@@ -270,7 +274,7 @@ class PengajuanSuratPhaseOneTest extends TestCase
         $this->actingAs($staff)
             ->get(route('pengajuan-surat.preview', $pengajuan))
             ->assertOk()
-            ->assertSee('Pengesahan Digital')
+            ->assertSee('Ditandatangani digital')
             ->assertSee($signature->verification_code);
 
         $this->assertDatabaseHas('pengajuan_surats', [

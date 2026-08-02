@@ -111,50 +111,52 @@
 
         .signature-box {
             text-align: center;
-            width: 240px;
+            width: 260px;
         }
 
         .signature-line {
-            border-bottom: 1px solid #111827;
-            height: 76px;
-            margin-bottom: 8px;
-        }
-
-        .digital-seal {
+            align-items: center;
             border: 1px solid #bbf7d0;
             background: #f0fdf4;
-            display: grid;
-            gap: 14px;
-            grid-template-columns: 112px 1fr;
-            margin-top: 32px;
-            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 132px;
+            margin: 8px 0;
+            padding: 10px;
         }
 
-        .digital-seal img {
+        .signature-line.unsigned {
+            background: #fff;
+            border: 0;
+            border-bottom: 1px solid #111827;
+            min-height: 76px;
+            padding: 0;
+        }
+
+        .signature-line img {
             border: 1px solid #d1fae5;
             display: block;
-            height: 112px;
-            width: 112px;
+            height: 86px;
+            width: 86px;
         }
 
-        .digital-seal-label {
-            color: #166534;
-            font-size: 11px;
-            font-weight: bold;
-            letter-spacing: .12em;
-            margin-bottom: 4px;
-            text-transform: uppercase;
-        }
-
-        .digital-seal code {
+        .signature-line code {
             background: #fff;
             border: 1px solid #bbf7d0;
             color: #166534;
             display: inline-block;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: bold;
-            margin: 4px 0;
-            padding: 4px 7px;
+            margin-top: 6px;
+            padding: 3px 6px;
+        }
+
+        .signature-note {
+            color: #166534;
+            font-size: 10.5px;
+            font-weight: bold;
+            margin-top: 4px;
         }
 
         .toolbar {
@@ -287,38 +289,33 @@
             @endforeach
         </table>
 
-        @if($pengajuanSurat->digitalSignature)
-        @php
-        $signature = $pengajuanSurat->digitalSignature;
-        $verificationUrl = route('verification.show', $signature->verification_code);
-        @endphp
-        <section class="digital-seal">
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=112x112&data={{ urlencode($verificationUrl) }}" alt="QR verifikasi {{ $signature->verification_code }}">
-            <div>
-                <div class="digital-seal-label">Pengesahan Digital</div>
-                <strong>Ditandatangani oleh {{ $signature->signer->name }}</strong><br>
-                <span>{{ $signature->signer->jabatan }} • {{ $signature->signed_at->format('d/m/Y H:i') }} WIB</span><br>
-                <code>{{ $signature->verification_code }}</code>
-                <p style="font-size: 12px; margin: 4px 0 0;">
-                    Scan QR pada preview web atau gunakan kode verifikasi di PDF/DOCX untuk memastikan dokumen sama dengan arsip final sistem.
-                </p>
-            </div>
-        </section>
-        @else
+        @if(! $pengajuanSurat->digitalSignature)
         <p class="body-copy">
             Dokumen ini mengikuti template resmi yang disediakan dan akan dilengkapi tanda tangan digital serta kode verifikasi setelah disetujui Kabid.
         </p>
         @endif
 
+        @if($pengajuanSurat->digitalSignature)
+        @php
+        $signature = $pengajuanSurat->digitalSignature;
+        $verificationUrl = route('verification.show', $signature->verification_code);
+        @endphp
+        @endif
+
         <section class="signature-space">
             <div class="signature-box">
                 <div>Kepala Bidang</div>
-                <div class="signature-line">
+                <div class="signature-line {{ $pengajuanSurat->digitalSignature ? '' : 'unsigned' }}">
                     @if($pengajuanSurat->digitalSignature)
-                    <div style="padding-top: 24px; color: #166534; font-weight: bold;">Signed digitally</div>
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=112x112&data={{ urlencode($verificationUrl) }}" alt="QR verifikasi {{ $signature->verification_code }}">
+                    <code>{{ $signature->verification_code }}</code>
+                    <div class="signature-note">Ditandatangani digital</div>
                     @endif
                 </div>
                 <strong>{{ $pengajuanSurat->digitalSignature?->signer->name ?? '________________________' }}</strong>
+                @if($pengajuanSurat->digitalSignature)
+                <div style="font-size: 11px; color: #475569;">{{ $signature->signed_at->format('d/m/Y H:i') }} WIB</div>
+                @endif
             </div>
         </section>
     </main>

@@ -172,7 +172,7 @@ class SuratTemplateService
 
     public function pdfBinary(PengajuanSurat $pengajuanSurat): string
     {
-        return $this->makeSimplePdf($this->plainText($pengajuanSurat));
+        return $this->makeSimplePdf($pengajuanSurat);
     }
 
     public function docxBinary(PengajuanSurat $pengajuanSurat): string
@@ -246,16 +246,25 @@ class SuratTemplateService
         return Str::slug($pengajuanSurat->nomor_pengajuan.'-'.$pengajuanSurat->jenisSurat->nama).'.'.$extension;
     }
 
-    private function makeSimplePdf(array $lines): string
+    private function makeSimplePdf(PengajuanSurat $pengajuanSurat): string
     {
+        $pengajuanSurat->loadMissing(['digitalSignature.signer']);
+        $lines = $this->plainText($pengajuanSurat);
         $stream = "BT\n/F1 12 Tf\n50 790 Td\n";
+        $lastY = 790;
 
         foreach ($lines as $index => $line) {
             $safeLine = str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], $line);
             $stream .= ($index === 0 ? '/F1 16 Tf ' : '/F1 11 Tf ').'('.$safeLine.") Tj\n0 -20 Td\n";
+            $lastY -= 20;
         }
 
         $stream .= "ET\n";
+
+        if ($pengajuanSurat->digitalSignature) {
+            $stream .= $this->pdfSignatureBlock($pengajuanSurat, max(130, $lastY - 36));
+        }
+
         $objects = [
             "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
             "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n",
@@ -280,6 +289,86 @@ class SuratTemplateService
         }
 
         return $pdf."trailer\n<< /Size ".(count($objects) + 1)." /Root 1 0 R >>\nstartxref\n".$xref."\n%%EOF";
+    }
+
+    private function pdfSignatureBlock(PengajuanSurat $pengajuanSurat, int $topY): string
+    {
+        $signature = $pengajuanSurat->digitalSignature;
+        $signerName = str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], $signature->signer->name);
+        $verificationCode = $signature->verification_code;
+        $barcode = $this->code128Bars($verificationCode);
+        $x = 348;
+        $y = $topY - 76;
+        $height = 42;
+        $module = 0.72;
+        $stream = "q\n";
+        $stream .= "0.94 0.99 0.96 rg\n344 ".($topY - 102)." 190 118 re f\n";
+        $stream .= "0.07 0.45 0.40 RG\n344 ".($topY - 102)." 190 118 re S\n";
+        $stream .= "BT\n/F1 10 Tf\n384 ".($topY - 12)." Td\n(Kepala Bidang) Tj\nET\n";
+        $stream .= "0 0 0 rg\n";
+
+        foreach ($barcode as [$offset, $width]) {
+            $stream .= ($x + ($offset * $module))." ".$y." ".($width * $module)." ".$height." re f\n";
+        }
+
+        $safeCode = str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], $verificationCode);
+        $stream .= "BT\n/F1 8 Tf\n".($x + 22)." ".($y - 12)." Td\n($safeCode) Tj\nET\n";
+        $stream .= "BT\n/F1 8 Tf\n".($x + 6)." ".($y - 26)." Td\n(Scan barcode / verifikasi kode) Tj\nET\n";
+        $stream .= "BT\n/F1 10 Tf\n".($x + 8)." ".($topY - 96)." Td\n($signerName) Tj\nET\n";
+        $stream .= "Q\n";
+
+        return $stream;
+    }
+
+    private function code128Bars(string $value): array
+    {
+        $patterns = [
+            '212222', '222122', '222221', '121223', '121322', '131222', '122213', '122312', '132212', '221213',
+            '221312', '231212', '112232', '122132', '122231', '113222', '123122', '123221', '223211', '221132',
+            '221231', '213212', '223112', '312131', '311222', '321122', '321221', '312212', '322112', '322211',
+            '212123', '212321', '232121', '111323', '131123', '131321', '112313', '132113', '132311', '211313',
+            '231113', '231311', '112133', '112331', '132131', '113123', '113321', '133121', '313121', '211331',
+            '231131', '213113', '213311', '213131', '311123', '311321', '331121', '312113', '312311', '332111',
+            '314111', '221411', '431111', '111224', '111422', '121124', '121421', '141122', '141221', '112214',
+            '112412', '122114', '122411', '142112', '142211', '241211', '221114', '413111', '241112', '134111',
+            '111242', '121142', '121241', '114212', '124112', '124211', '411212', '421112', '421211', '212141',
+            '214121', '412121', '111143', '111341', '131141', '114113', '114311', '411113', '411311', '113141',
+            '114131', '311141', '411131', '211412', '211214', '211232', '2331112',
+        ];
+
+        $codes = [104];
+
+        foreach (str_split($value) as $character) {
+            $ordinal = ord($character);
+            $codes[] = ($ordinal >= 32 && $ordinal <= 126) ? $ordinal - 32 : 0;
+        }
+
+        $checksum = $codes[0];
+
+        foreach (array_slice($codes, 1) as $position => $code) {
+            $checksum += $code * ($position + 1);
+        }
+
+        $codes[] = $checksum % 103;
+        $codes[] = 106;
+        $bars = [];
+        $offset = 0;
+
+        foreach ($codes as $code) {
+            $pattern = $patterns[$code];
+
+            foreach (str_split($pattern) as $index => $width) {
+                $width = (int) $width;
+
+                if ($index % 2 === 0) {
+                    $bars[] = [$offset, $width];
+                }
+
+                $offset += $width;
+            }
+        }
+
+        return $bars;
     }
 
     private function makeSimpleDocx(array $lines): string
