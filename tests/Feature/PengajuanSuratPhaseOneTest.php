@@ -97,6 +97,49 @@ class PengajuanSuratPhaseOneTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_only_staff_can_create_pengajuan_surat(): void
+    {
+        $this->seed();
+
+        $kasi = User::where('role', 'kasi')->firstOrFail();
+        $kabid = User::where('role', 'kabid')->firstOrFail();
+        $jenisSurat = JenisSurat::where('slug', 'surat-cuti')->firstOrFail();
+
+        foreach ([$kasi, $kabid] as $user) {
+            $this->actingAs($user)
+                ->get(route('pengajuan-surat.create'))
+                ->assertForbidden();
+
+            $this->actingAs($user)
+                ->post(route('pengajuan-surat.store'), [
+                    'jenis_surat_id' => $jenisSurat->id,
+                    'tanggal_pengajuan' => '2026-07-24',
+                    'perihal' => 'Pengajuan dari non-staff',
+                    'fields' => [],
+                ])
+                ->assertForbidden();
+        }
+    }
+
+    public function test_user_management_is_admin_only(): void
+    {
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $kasi = User::where('role', 'kasi')->firstOrFail();
+        $kabid = User::where('role', 'kabid')->firstOrFail();
+
+        foreach ([$staff, $kasi, $kabid] as $user) {
+            $this->actingAs($user)
+                ->get(route('users.index'))
+                ->assertForbidden();
+
+            $this->actingAs($user)
+                ->get(route('users.create'))
+                ->assertForbidden();
+        }
+    }
+
     public function test_kabid_uses_pengajuan_workspace_instead_of_legacy_surat_modules(): void
     {
         $this->seed();
@@ -106,7 +149,7 @@ class PengajuanSuratPhaseOneTest extends TestCase
         $this->actingAs($kabid)
             ->get(route('dashboard'))
             ->assertOk()
-            ->assertSee('Meja Approval')
+            ->assertSee('Approval Kabid')
             ->assertDontSee('Monitoring Surat Masuk')
             ->assertDontSee('Surat Keluar');
 
@@ -119,6 +162,32 @@ class PengajuanSuratPhaseOneTest extends TestCase
             ->assertForbidden();
 
         $this->actingAs($kabid)
+            ->get(route('disposisi.index'))
+            ->assertForbidden();
+    }
+
+    public function test_staff_uses_pengajuan_workspace_instead_of_legacy_surat_modules(): void
+    {
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+
+        $this->actingAs($staff)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Pengajuan Saya')
+            ->assertDontSee('Kotak Masuk Saya')
+            ->assertDontSee('Surat Keluar');
+
+        $this->actingAs($staff)
+            ->get(route('surat-masuk.index'))
+            ->assertForbidden();
+
+        $this->actingAs($staff)
+            ->get(route('surat-keluar.index'))
+            ->assertForbidden();
+
+        $this->actingAs($staff)
             ->get(route('disposisi.index'))
             ->assertForbidden();
     }
@@ -225,7 +294,7 @@ class PengajuanSuratPhaseOneTest extends TestCase
             'status' => 'disetujui_kabid',
             'posisi_saat_ini' => $kabid->id,
             'metadata' => [
-                    'form_data' => [
+                'form_data' => [
                     'nomor_surat' => '800.1.11.1/001/ST/Dishut.III/2026',
                     'dasar_pertama' => 'Peraturan Gubernur Sumatera Selatan Nomor 48 Tahun 2016.',
                     'dasar_kedua' => 'Surat Kepala Bappeda Nomor 000.1.5/1517/Bappeda-IV/2026.',
@@ -310,7 +379,7 @@ class PengajuanSuratPhaseOneTest extends TestCase
             'status' => 'disetujui_kabid',
             'posisi_saat_ini' => $kabid->id,
             'metadata' => [
-                    'form_data' => [
+                'form_data' => [
                     'nomor_surat' => '800.1.11.1/002/ST/Dishut.III/2026',
                     'dasar_pertama' => 'Peraturan Gubernur Sumatera Selatan Nomor 48 Tahun 2016.',
                     'dasar_kedua' => 'Surat Kepala Bappeda Nomor 000.1.5/1517/Bappeda-IV/2026.',

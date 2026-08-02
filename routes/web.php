@@ -30,12 +30,12 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
 
     Route::get('/dashboard', [LaporanController::class, 'index'])->name('dashboard');
-    // Route Surat Masuk
-    Route::resource('surat-masuk', SuratMasukController::class);
+    // Route arsip lama dibatasi ke aksi yang benar-benar masih punya handler.
+    Route::resource('surat-masuk', SuratMasukController::class)->only(['index', 'create', 'store', 'show']);
     // Route Disposisi (Inbox & Proses)
     Route::resource('disposisi', DisposisiController::class)->only(['index', 'show', 'update']);
-    // Route Surat Keluar
-    Route::resource('surat-keluar', SuratKeluarController::class);
+    // Route arsip lama dibatasi ke aksi yang benar-benar masih punya handler.
+    Route::resource('surat-keluar', SuratKeluarController::class)->only(['index', 'create', 'store', 'show', 'update']);
     Route::resource('jenis-surat', JenisSuratController::class)->except(['create', 'edit', 'show']);
     Route::post('pengajuan-surat/{pengajuan_surat}/process', [PengajuanSuratController::class, 'process'])->name('pengajuan-surat.process');
     Route::post('pengajuan-surat/{pengajuan_surat}/sign', [PengajuanSuratController::class, 'sign'])->name('pengajuan-surat.sign');
@@ -47,7 +47,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
 
-    Route::resource('users', UserController::class);
+    Route::resource('users', UserController::class)->only(['index', 'create', 'store', 'destroy']);
 
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });

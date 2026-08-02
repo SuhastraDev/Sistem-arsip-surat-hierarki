@@ -332,6 +332,6 @@ class SuratKeluarController extends Controller
 
     private function ensureLegacyAllowed(): void
     {
-        abort_if(in_array(Auth::user()->role, ['kabid', 'kasi'], true), 403, 'Modul lama sudah diganti oleh Pengajuan Surat.');
+        abort_unless(Auth::user()->role === 'admin', 403, 'Modul lama sudah diganti oleh Pengajuan Surat.');
     }
 }

@@ -611,21 +611,6 @@
             </a>
             @endif
 
-            @if(Auth::user()->role === 'staff')
-            <div class="menu-label">Tugas Staff</div>
-
-            @php
-            $countInbox = \App\Models\DisposisiSurat::where('penerima_id', Auth::id())->where('is_read', 0)->count();
-            @endphp
-            <a href="{{ route('disposisi.index') }}" class="nav-link {{ request()->is('disposisi*') ? 'active' : '' }}">
-                <i class="fas fa-inbox"></i>
-                <span>Surat Masuk</span>
-                @if($countInbox > 0)
-                <span class="badge bg-danger nav-badge">{{ $countInbox }}</span>
-                @endif
-            </a>
-            @endif
-
             @if(in_array(Auth::user()->role, ['admin', 'staff', 'kabid', 'kasi']))
 
             @php

@@ -63,7 +63,7 @@ class PengajuanSuratController extends Controller
 
     public function create()
     {
-        abort_if(Auth::user()->role === 'admin', 403);
+        abort_unless(Auth::user()->role === 'staff', 403, 'Pengajuan surat hanya dibuat oleh Staff.');
 
         $jenisSurats = JenisSurat::aktif()->orderBy('nama')->get();
         $templateDefinitions = $this->templateService->definitions();
@@ -73,7 +73,7 @@ class PengajuanSuratController extends Controller
 
     public function store(Request $request)
     {
-        abort_if(Auth::user()->role === 'admin', 403);
+        abort_unless(Auth::user()->role === 'staff', 403, 'Pengajuan surat hanya dibuat oleh Staff.');
 
         $baseData = $request->validate([
             'jenis_surat_id' => ['required', 'exists:jenis_surats,id'],
@@ -220,10 +220,6 @@ class PengajuanSuratController extends Controller
 
         if ($user->role === 'staff' && $user->parent_id) {
             return User::find($user->parent_id);
-        }
-
-        if ($user->role === 'kasi') {
-            return User::where('role', 'kabid')->first();
         }
 
         return null;

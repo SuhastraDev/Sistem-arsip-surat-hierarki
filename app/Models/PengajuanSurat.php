@@ -20,7 +20,6 @@ class PengajuanSurat extends Model
         'diperiksa_kabid' => 'Diperiksa Kabid',
         'disetujui_kabid' => 'Disetujui Kabid',
         'ditolak' => 'Ditolak',
-        'ditandatangani' => 'Ditandatangani',
         'selesai' => 'Selesai',
     ];
 
@@ -94,10 +93,6 @@ class PengajuanSurat extends Model
 
         if ($this->status === 'disetujui_kabid') {
             return 'Menunggu tanda tangan Kabid';
-        }
-
-        if ($this->status === 'ditandatangani') {
-            return 'Dokumen ditandatangani Kabid';
         }
 
         if ($this->status === 'selesai' && $this->posisi?->id === $this->pemohon_id) {
