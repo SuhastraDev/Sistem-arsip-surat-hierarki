@@ -189,6 +189,21 @@ class SuratTemplateService
         ]);
     }
 
+    public function previewPdf(PengajuanSurat $pengajuanSurat): ?Response
+    {
+        $pdf = $this->storedSignedArtifact($pengajuanSurat, 'pdf')
+            ?? $this->docxToPdfBinary($this->docxBinary($pengajuanSurat));
+
+        if (! $pdf) {
+            return null;
+        }
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.$this->fileName($pengajuanSurat, 'pdf').'"',
+        ]);
+    }
+
     public function downloadDocx(PengajuanSurat $pengajuanSurat): Response
     {
         $docx = $this->storedSignedArtifact($pengajuanSurat, 'docx') ?? $this->docxBinary($pengajuanSurat);

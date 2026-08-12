@@ -658,7 +658,7 @@ class PengajuanSuratPhaseOneTest extends TestCase
         $this->actingAs($staff)
             ->get(route('pengajuan-surat.preview', $pengajuan))
             ->assertOk()
-            ->assertSee('Ditandatangani digital')
+            ->assertHeader('Content-Type', 'application/pdf')
             ->assertSee($signature->verification_code);
 
         $this->assertDatabaseHas('pengajuan_surats', [

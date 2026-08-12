@@ -203,6 +203,12 @@ class PengajuanSuratController extends Controller
         $pengajuanSurat->load(['jenisSurat', 'pemohon', 'posisi', 'digitalSignature.signer']);
         $this->authorizeView($pengajuanSurat);
 
+        $pdfPreview = $this->templateService->previewPdf($pengajuanSurat);
+
+        if ($pdfPreview) {
+            return $pdfPreview;
+        }
+
         return view('pengajuan-surat.template', [
             'pengajuanSurat' => $pengajuanSurat,
             'rows' => $this->templateService->templateRows($pengajuanSurat),
