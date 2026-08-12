@@ -14,6 +14,20 @@ class PengajuanSuratPhaseOneTest extends TestCase
 {
     use RefreshDatabase;
 
+    private function documentXmlFromDocxResponse($response): string
+    {
+        $temp = tempnam(sys_get_temp_dir(), 'docx-test');
+        file_put_contents($temp, $response->getContent());
+
+        $zip = new \ZipArchive;
+        $zip->open($temp);
+        $documentXml = $zip->getFromName('word/document.xml');
+        $zip->close();
+        @unlink($temp);
+
+        return $documentXml ?: '';
+    }
+
     public function test_admin_can_open_master_jenis_surat_with_seeded_types(): void
     {
         $this->seed();
@@ -306,9 +320,16 @@ class PengajuanSuratPhaseOneTest extends TestCase
             ->assertOk()
             ->assertHeader('Content-Type', 'application/pdf');
 
-        $this->get(route('pengajuan-surat.export', [$pengajuan, 'docx']))
+        $docxResponse = $this->get(route('pengajuan-surat.export', [$pengajuan, 'docx']));
+        $docxResponse
             ->assertOk()
             ->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+
+        $documentXml = $this->documentXmlFromDocxResponse($docxResponse);
+        $this->assertStringContainsString('NOTA DINAS', $documentXml);
+        $this->assertStringContainsString('Koordinasi internal', $documentXml);
+        $this->assertStringContainsString('Permohonan koordinasi tindak lanjut kegiatan.', $documentXml);
+        $this->assertStringNotContainsString('Sistem E-Arsip Surat Digital', $documentXml);
     }
 
     public function test_surat_tugas_docx_export_uses_official_template_layout(): void
@@ -339,14 +360,7 @@ class PengajuanSuratPhaseOneTest extends TestCase
 
         $pengajuan = PengajuanSurat::firstOrFail();
         $response = $this->get(route('pengajuan-surat.export', [$pengajuan, 'docx']));
-        $temp = tempnam(sys_get_temp_dir(), 'spt-test');
-        file_put_contents($temp, $response->getContent());
-
-        $zip = new \ZipArchive;
-        $zip->open($temp);
-        $documentXml = $zip->getFromName('word/document.xml');
-        $zip->close();
-        @unlink($temp);
+        $documentXml = $this->documentXmlFromDocxResponse($response);
 
         $this->assertStringContainsString('PEMERINTAH PROVINSI SUMATERA SELATAN', $documentXml);
         $this->assertStringContainsString('SURAT ', $documentXml);
@@ -441,6 +455,14 @@ class PengajuanSuratPhaseOneTest extends TestCase
         $this->get(route('pengajuan-surat.show', $pengajuan))
             ->assertOk()
             ->assertSee('surat-pendukung.pdf');
+
+        $docxResponse = $this->get(route('pengajuan-surat.export', [$pengajuan, 'docx']));
+        $documentXml = $this->documentXmlFromDocxResponse($docxResponse);
+        $this->assertStringContainsString('FORMULIR PERMINTAAN DAN PEMBERIAN CUTI', $documentXml);
+        $this->assertStringContainsString($staff->name, $documentXml);
+        $this->assertStringContainsString('Keperluan keluarga', $documentXml);
+        $this->assertStringContainsString('3 HARI', $documentXml);
+        $this->assertStringNotContainsString('Sistem E-Arsip Surat Digital', $documentXml);
     }
 
     public function test_surat_cuti_rejects_request_that_exceeds_annual_quota(): void
@@ -557,6 +579,13 @@ class PengajuanSuratPhaseOneTest extends TestCase
             ->assertSee('Surat Undangan Rapat')
             ->assertSee('Undangan Rapat')
             ->assertSee('20260729080454_Surat undangan Rapat Genus Rona_31 Agustus 2026.pdf');
+
+        $docxResponse = $this->get(route('pengajuan-surat.export', [$pengajuan, 'docx']));
+        $documentXml = $this->documentXmlFromDocxResponse($docxResponse);
+        $this->assertStringContainsString('PEMERINTAH PROVINSI SUMATERA SELATAN', $documentXml);
+        $this->assertStringContainsString('Undangan Rapat', $documentXml);
+        $this->assertStringContainsString('Penyampaian Rencana Kerja Tenaga Ahli KBEP.', $documentXml);
+        $this->assertStringNotContainsString('Sistem E-Arsip Surat Digital', $documentXml);
     }
 
     public function test_kabid_can_digitally_sign_approved_pengajuan(): void

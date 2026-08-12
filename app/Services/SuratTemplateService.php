@@ -17,7 +17,8 @@ class SuratTemplateService
             'surat-cuti' => [
                 'title' => 'Surat Cuti',
                 'summary' => 'Mengikuti formulir permintaan dan pemberian cuti BKN yang disediakan.',
-                'template_label' => 'SURAT CUTII_GUSTI_2026.docx',
+                'template_label' => 'Surat Cuti.docx',
+                'template_docx' => 'Surat Cuti.docx',
                 'template_note' => 'Template resmi cuti: data pegawai, jenis cuti, alasan, alamat, dan pertimbangan atasan.',
                 'fields' => [
                     'nama_pegawai' => ['label' => 'Nama pegawai', 'type' => 'text', 'required' => true, 'readonly' => true, 'source' => 'user.name', 'placeholder' => 'Terisi otomatis dari akun'],
@@ -38,8 +39,8 @@ class SuratTemplateService
             'surat-tugas' => [
                 'title' => 'Surat Tugas',
                 'summary' => 'Mengikuti template Surat Perintah Tugas yang disediakan.',
-                'template_label' => 'SPT Bappeda 27 sd 31 Juli 2026.doc',
-                'template_docx' => 'SPT Bappeda 27 sd 31 Juli 2026.docx',
+                'template_label' => 'Surat Tugas.doc',
+                'template_docx' => 'Surat Tugas.docx',
                 'template_note' => 'Template resmi SPT: dasar surat, daftar pegawai yang bepergian, kegiatan, tujuan perjalanan, lama perjalanan, dan penandatangan.',
                 'fields' => [
                     'nomor_surat' => ['label' => 'Nomor surat', 'type' => 'text', 'required' => true, 'readonly' => true, 'source' => 'surat_tugas.nomor_surat', 'placeholder' => 'Terisi otomatis oleh sistem'],
@@ -59,7 +60,8 @@ class SuratTemplateService
             'nota-dinas' => [
                 'title' => 'Nota Dinas',
                 'summary' => 'Mengikuti contoh Nota Dinas IKK Februari 2026 yang disediakan.',
-                'template_label' => 'Nota Dinas_IKK Februari 2026.pdf',
+                'template_label' => 'Nota Dinas.pdf',
+                'template_docx' => 'Nota Dinas.docx',
                 'template_note' => 'Template resmi nota dinas: kepada, tembusan, dari, tanggal, nomor, lampiran, perihal, isi nota, dan lampiran capaian.',
                 'fields' => [
                     'kepada' => ['label' => 'Kepada Yth.', 'type' => 'text', 'required' => true, 'readonly' => true, 'source' => 'nota.kepada', 'placeholder' => 'Terisi otomatis oleh sistem'],
@@ -78,6 +80,7 @@ class SuratTemplateService
                 'title' => 'Surat Undangan Rapat',
                 'summary' => 'Mengikuti template undangan rapat Genus Rona yang disediakan.',
                 'template_label' => '20260729080454_Surat undangan Rapat Genus Rona_31 Agustus 2026.pdf',
+                'template_docx' => 'Surat Undangan.docx',
                 'template_note' => 'Template resmi undangan: nomor, sifat, lampiran, hal, tujuan undangan, jadwal rapat, tautan, agenda, kontak, dan penandatangan.',
                 'fields' => [
                     'nomor_surat' => ['label' => 'Nomor surat', 'type' => 'text', 'required' => false, 'placeholder' => 'Contoh: 500.4.6.4/3508/Dishut.III/2026'],
@@ -198,7 +201,7 @@ class SuratTemplateService
 
     public function pdfBinary(PengajuanSurat $pengajuanSurat): string
     {
-        if ($pengajuanSurat->jenisSurat->slug === 'surat-tugas') {
+        if (in_array($pengajuanSurat->jenisSurat->slug, ['surat-cuti', 'surat-tugas', 'nota-dinas', 'surat-undangan'], true)) {
             return $this->docxToPdfBinary($this->docxBinary($pengajuanSurat)) ?? $this->makeSimplePdf($pengajuanSurat);
         }
 
@@ -207,11 +210,13 @@ class SuratTemplateService
 
     public function docxBinary(PengajuanSurat $pengajuanSurat): string
     {
-        if ($pengajuanSurat->jenisSurat->slug === 'surat-tugas') {
-            return $this->makeSuratTugasDocx($pengajuanSurat);
-        }
-
-        return $this->makeSimpleDocx($this->plainText($pengajuanSurat));
+        return match ($pengajuanSurat->jenisSurat->slug) {
+            'surat-cuti' => $this->makeSuratCutiDocx($pengajuanSurat),
+            'surat-tugas' => $this->makeSuratTugasDocx($pengajuanSurat),
+            'nota-dinas' => $this->makeNotaDinasDocx($pengajuanSurat),
+            'surat-undangan' => $this->makeSuratUndanganDocx($pengajuanSurat),
+            default => $this->makeSimpleDocx($this->plainText($pengajuanSurat)),
+        };
     }
 
     public function canonicalPlainText(PengajuanSurat $pengajuanSurat): array
@@ -449,19 +454,105 @@ class SuratTemplateService
         return $pdf."trailer\n<< /Size ".(count($objects) + 1)." /Root 1 0 R >>\nstartxref\n".$xref."\n%%EOF";
     }
 
+    private function makeSuratCutiDocx(PengajuanSurat $pengajuanSurat): string
+    {
+        return $this->makeTemplateDocx($pengajuanSurat, 'surat-cuti', function (string $xml, array $data, PengajuanSurat $pengajuanSurat): string {
+            $xml = $this->replaceWordText($xml, 'Palembang, 25 Maret 2026', 'Palembang, '.$this->formatIndonesianLongDate($pengajuanSurat->tanggal_pengajuan->toDateString()));
+            $xml = $this->replaceWordText($xml, 'I Gusti Ayu Kusuma Wardani, S.Hut', $data['nama_pegawai'] ?? '-');
+            $xml = $this->replaceWordText($xml, '199402012022032011', $data['nip'] ?? '-');
+            $xml = $this->replaceWordText($xml, 'Polisi Kehutanan', $data['jabatan_unit'] ?? '-');
+            $xml = $this->replaceWordText($xml, '4 tahun', '-');
+            $xml = $this->replaceWordText($xml, 'Bidang Perlindungan dan KSDAE', $data['unit_kerja'] ?? '-', 1);
+            $xml = $this->replaceWordText($xml, 'Keperluan keluarga', $data['alasan'] ?? '-');
+            $xml = $this->replaceWordText($xml, '1 HARI', strtoupper($data['lama_cuti'] ?? '-'));
+            $xml = $this->replaceWordText($xml, '30 Maret 2026', $this->formatIndonesianLongDate($data['tanggal_mulai'] ?? null));
+            $xml = $this->replaceWordText($xml, 'Lampung', $data['alamat_selama_cuti'] ?? '-');
+            $xml = $this->replaceWordText($xml, '0813 7391 4100', $data['telepon'] ?? '-');
+            $xml = $this->replaceWordText($xml, 'Hormat Saya, I Gusti Ayu Kusuma Wardani, S.Hut NIP. 19940201 202203 2 011', "Hormat Saya,\n\n\n".($data['nama_pegawai'] ?? '-')."\nNIP. ".($data['nip'] ?? '-'));
+            $xml = $this->replaceWordText($xml, 'Plh. Kepala Seksi Pengendalian Kerusakan dan Pengamanan Hutan, Ferry Yurisman, S.P NIP. 19730228 199003 1 009', $data['atasan_langsung'] ?? '-');
+
+            return $this->markCutiType($xml, $data['jenis_cuti'] ?? '');
+        });
+    }
+
     private function makeSuratTugasDocx(PengajuanSurat $pengajuanSurat): string
     {
-        $templatePath = base_path('template/'.$this->definition('surat-tugas')['template_docx']);
+        return $this->makeTemplateDocx($pengajuanSurat, 'surat-tugas', function (string $xml, array $data, PengajuanSurat $pengajuanSurat): string {
+            $xml = $this->replaceWordText($xml, '800.1.11.1/         /ST/Dishut.III/2026', $data['nomor_surat'] ?? '-');
+            $xml = $this->replaceWordText($xml, 'Tanggal : Juli 2026', 'Tanggal'."\t\t".': '.$this->formatIndonesianLongDate($pengajuanSurat->tanggal_pengajuan->toDateString()));
+            $xml = $this->replaceWordText($xml, 'Peraturan Gubernur Sumatera Selatan Nomor: 48 Tahun 2016 tentang Susunan Organisasi, Uraian Tugas dan Fungsi Dinas Kehutanan Provinsi Sumatera Selatan.', $data['dasar_pertama'] ?? '-');
+            $xml = $this->replaceWordText($xml, 'Surat Kepala Badan Perencanaan Pembangunan Daerah Nomor : 000.1.5/1517/Bappeda-IV/2026 Tanggal 21 Juli 2026 tentang Peningkatan Kapasitas dalam Rangka Pembangunan Rendah Karbon Daerah di Provinsi Sumatera Selatan.', $data['dasar_kedua'] ?? '-');
+            $xml = $this->fillSuratTugasPegawai($xml, $data['pegawai_berangkat'] ?? '');
+            $xml = $this->replaceWordText($xml, 'Menghadiri Kegiatan Peningkatan Kapasitas dalam Rangka Pembangunan Rendah Karbon Daerah di Provinsi Sumatera Selatan', $data['kegiatan'] ?? '-');
+            $xml = $this->replaceWordText($xml, 'Aston Pallembang Hotel & Conference Center Jl. Jend. Basuki Rachmat o.189, Talang Aman, Kec. Kemuning, Kota Palembang, Sumatera Selatan 30126', $data['tujuan_perjalanan'] ?? '-');
+            $xml = $this->replaceWordText($xml, '5 (lima) hari / 27-31 Juli 2026', $data['lama_perjalanan'] ?? '-');
+            $xml = $this->replaceWordText($xml, 'Biaya yang timbul dari kegiatan tersebut dibebankan pada Badan Perencanaan Pembangunan Daerah. Membuat Laporan tertulis hasil pelaksanaan tugas tersebut 1 (satu) minggu setelah pelaksanaan tugas kepada Kepala Dinas Kehutanan Provinsi Sumatera Selatan.', trim(($data['keterangan_biaya'] ?? '')."\n".($data['kewajiban_laporan'] ?? '')) ?: '-');
 
-        if (! is_file($templatePath)) {
+            if ($pengajuanSurat->digitalSignature) {
+                $signatureText = 'Ditandatangani digital: '.$pengajuanSurat->digitalSignature->verification_code;
+                $xml = $this->replaceWordText($xml, 'SUSILO HARTONO, S.Hut., M.Si', $signatureText."\n".$pengajuanSurat->digitalSignature->signer->name);
+            } elseif (! empty($data['penandatangan'])) {
+                $xml = $this->replaceWordText($xml, 'SUSILO HARTONO, S.Hut., M.Si', $data['penandatangan']);
+            }
+
+            return $xml;
+        });
+    }
+
+    private function makeNotaDinasDocx(PengajuanSurat $pengajuanSurat): string
+    {
+        return $this->makeTemplateDocx($pengajuanSurat, 'nota-dinas', function (string $xml, array $data): string {
+            $xml = $this->replaceWordText($xml, 'Kepala Dinas Kehutanan Provinsi Sumatera Selatan', $data['kepada'] ?? '-');
+            $xml = $this->replaceWordText($xml, 'Sekretaris u.b Kasubbag. Perencanaan, Evaluasi dan Pelaporan', $data['tembusan'] ?? '-');
+            $xml = $this->replaceWordText($xml, 'Kepala Bidang Perlindungan dan KSDAE', $data['dari'] ?? '-');
+            $xml = $this->replaceWordText($xml, 'Maret 2026', $this->formatIndonesianLongDate($data['tanggal_nota'] ?? null), 1);
+            $xml = $this->replaceWordText($xml, '500.0.0.0/            /ND.DISHUT/I/2026', $data['nomor_nota'] ?? '-');
+            $xml = $this->replaceWordText($xml, '1 (satu) berkas', isset($data['lampiran']) ? '1 (satu) berkas' : '-');
+            $xml = $this->replaceWordText($xml, 'Penyampaian Capaian Indikator Kinerja Kunci (IKK) Bulan Februari 2026', $data['perihal_nota'] ?? '-');
+            $xml = $this->replaceWordText($xml, 'Menindaklanjuti Nota Dinas Kepala Dinas Kehutanan Nomor 000.7.2.8/126/ND. DISHUT/I/2026 perihal Capaian Indikator Kinerja Kunci (IKK) Bulan Februari Tahun 2026, bersama ini kami sampaikan laporan capaian IKK Bidang Perlindungan dan KSDAE sampai dengan Bulan Februari Tahun 2026. Berdasarkan hasil pengumpulan data dari masing-masing bidang teknis, capaian IKK Bulan Februari 2026 menunjukkan progres yang berjalan sesuai dengan target tahunan yang telah ditetapkan dalam dokumen perencanaan kinerja. Realisasi kinerja dihitung berdasarkan perbandingan antara target tahunan dengan capaian kumulatif sampai dengan bulan berjalan.', $data['isi_nota'] ?? '-');
+            $xml = $this->replaceWordText($xml, 'Dr. SYAFRUL YUNARDY, S.Hut., M.E', $data['penandatangan'] ?? '-');
+
+            return $xml;
+        });
+    }
+
+    private function makeSuratUndanganDocx(PengajuanSurat $pengajuanSurat): string
+    {
+        return $this->makeTemplateDocx($pengajuanSurat, 'surat-undangan', function (string $xml, array $data, PengajuanSurat $pengajuanSurat): string {
+            $xml = $this->replaceWordText($xml, 'Palembang, 28 Juli 2026', 'Palembang, '.$this->formatIndonesianLongDate($pengajuanSurat->tanggal_pengajuan->toDateString()));
+            $xml = $this->replaceWordText($xml, '500.4.6.4/3508/Dishut.III/2025', $data['nomor_surat'] ?? '-');
+            $xml = $this->replaceWordText($xml, 'Biasa', $data['sifat'] ?? '-');
+            $xml = $this->replaceWordText($xml, 'Lampiran : -', 'Lampiran'."\t".':'."\t".($data['lampiran'] ?? '-'));
+            $xml = $this->replaceWordText($xml, 'Undangan Rapat', $data['hal'] ?? '-');
+            $xml = $this->replaceWordText($xml, 'Kepala UPTD KPH Wilayah VIII Semendo Direktur PT. Genus Rona Hijau Direktur Yayasan Relung Indonesia Bakhtiar S. Aji di - Tempat', ($data['tujuan_undangan'] ?? '-')."\ndi - Tempat");
+            $xml = $this->replaceWordText($xml, 'Dalam rangka percepatan pelaksanaan implementasi RBP REDD+ GCF Output II KP 2 Provinsi Sumatera Selatan melalui kegiatan Inventarisasi Potensi Kawasan Bernilai Ekosistem Penting (KBEP) Kewenangan Daerah Provinsi Sumatera Selatan Tahun Anggaran 2026, diperlukan koordinasi awal untuk memperoleh kesamaan persepsi mengenai ruang lingkup pekerjaan, metodologi pelaksanaan, serta mekanisme koordinasi antar pihak yang terlibat. Berkenaan dengan hal tersebut, kami mengundang Bapak/Ibu untuk mengikuti rapat yang akan diselenggarakan secara daring pada:', $data['latar_belakang'] ?? '-');
+            $xml = $this->replaceWordText($xml, 'Jumat/31 Agustus 2026', $data['hari_tanggal'] ?? '-');
+            $xml = $this->replaceWordText($xml, '10.00 WIB s.d Selesai', $data['waktu'] ?? '-');
+            $xml = $this->replaceWordText($xml, 'Zoom meeting pada tautan https://bit.ly/Ranker-KBEP', $data['tempat'] ?? '-');
+            $xml = $this->replaceWordText($xml, 'Meeting ID: 897 5674 5132', 'Meeting ID: '.($data['meeting_id'] ?? '-'));
+            $xml = $this->replaceWordText($xml, 'Passcode: 629115', 'Passcode: '.($data['passcode'] ?? '-'));
+            $xml = $this->replaceWordText($xml, 'Penyampaian Rencana Kerja Tenaga Ahli Inventarisasi Potensi Kawasan', $data['agenda'] ?? '-');
+            $xml = $this->replaceWordText($xml, 'Bernilai Ekosistem Penting (KBEP) Kewenangan Daerah Provinsi Sumatera Selatan Tahun Anggaran 2026', '');
+            $xml = $this->replaceWordText($xml, 'Sdri. I Gusti Ayu Kusuma Wardani (0813-7391-4100).', $data['kontak_konfirmasi'] ?? '-');
+            $xml = $this->replaceWordText($xml, 'Drs. H. KOIMUDIN, S.H., M.M', $data['penandatangan'] ?? '-');
+
+            return $xml;
+        });
+    }
+
+    private function makeTemplateDocx(PengajuanSurat $pengajuanSurat, string $slug, callable $mapper): string
+    {
+        $templateDocx = $this->definition($slug)['template_docx'] ?? null;
+        $templatePath = $templateDocx ? base_path('template/'.$templateDocx) : null;
+
+        if (! $templatePath || ! is_file($templatePath)) {
             return $this->makeSimpleDocx($this->plainText($pengajuanSurat));
         }
 
         $pengajuanSurat->loadMissing(['digitalSignature.signer']);
         $data = $pengajuanSurat->metadata['form_data'] ?? [];
-        $temp = tempnam(sys_get_temp_dir(), 'spt-docx');
+        $temp = tempnam(sys_get_temp_dir(), 'template-docx');
         copy($templatePath, $temp);
-
         $zip = new ZipArchive;
         $zip->open($temp);
         $xml = $zip->getFromName('word/document.xml');
@@ -472,23 +563,7 @@ class SuratTemplateService
             return $this->makeSimpleDocx($this->plainText($pengajuanSurat));
         }
 
-        $xml = $this->replaceWordText($xml, '800.1.11.1/         /ST/Dishut.III/2026', $data['nomor_surat'] ?? '-');
-        $xml = $this->replaceWordText($xml, 'Tanggal : Juli 2026', 'Tanggal'."\t\t".': '.$this->formatIndonesianLongDate($pengajuanSurat->tanggal_pengajuan->toDateString()));
-        $xml = $this->replaceWordText($xml, 'Peraturan Gubernur Sumatera Selatan Nomor: 48 Tahun 2016 tentang Susunan Organisasi, Uraian Tugas dan Fungsi Dinas Kehutanan Provinsi Sumatera Selatan.', $data['dasar_pertama'] ?? '-');
-        $xml = $this->replaceWordText($xml, 'Surat Kepala Badan Perencanaan Pembangunan Daerah Nomor : 000.1.5/1517/Bappeda-IV/2026 Tanggal 21 Juli 2026 tentang Peningkatan Kapasitas dalam Rangka Pembangunan Rendah Karbon Daerah di Provinsi Sumatera Selatan.', $data['dasar_kedua'] ?? '-');
-        $xml = $this->fillSuratTugasPegawai($xml, $data['pegawai_berangkat'] ?? '');
-        $xml = $this->replaceWordText($xml, 'Menghadiri Kegiatan Peningkatan Kapasitas dalam Rangka Pembangunan Rendah Karbon Daerah di Provinsi Sumatera Selatan', $data['kegiatan'] ?? '-');
-        $xml = $this->replaceWordText($xml, 'Aston Pallembang Hotel & Conference Center Jl. Jend. Basuki Rachmat o.189, Talang Aman, Kec. Kemuning, Kota Palembang, Sumatera Selatan 30126', $data['tujuan_perjalanan'] ?? '-');
-        $xml = $this->replaceWordText($xml, '5 (lima) hari / 27-31 Juli 2026', $data['lama_perjalanan'] ?? '-');
-        $xml = $this->replaceWordText($xml, 'Biaya yang timbul dari kegiatan tersebut dibebankan pada Badan Perencanaan Pembangunan Daerah. Membuat Laporan tertulis hasil pelaksanaan tugas tersebut 1 (satu) minggu setelah pelaksanaan tugas kepada Kepala Dinas Kehutanan Provinsi Sumatera Selatan.', trim(($data['keterangan_biaya'] ?? '')."\n".($data['kewajiban_laporan'] ?? '')) ?: '-');
-
-        if ($pengajuanSurat->digitalSignature) {
-            $signatureText = 'Ditandatangani digital: '.$pengajuanSurat->digitalSignature->verification_code;
-            $xml = $this->replaceWordText($xml, 'SUSILO HARTONO, S.Hut., M.Si', $signatureText."\n".$pengajuanSurat->digitalSignature->signer->name);
-        } elseif (! empty($data['penandatangan'])) {
-            $xml = $this->replaceWordText($xml, 'SUSILO HARTONO, S.Hut., M.Si', $data['penandatangan']);
-        }
-
+        $xml = $mapper($xml, $data, $pengajuanSurat);
         $zip->addFromString('word/document.xml', $xml);
         $zip->close();
 
@@ -536,7 +611,7 @@ class SuratTemplateService
             ->all();
     }
 
-    private function replaceWordText(string $xml, string $search, string $replacement): string
+    private function replaceWordText(string $xml, string $search, string $replacement, ?int $occurrence = null): string
     {
         $dom = new \DOMDocument;
         $previous = libxml_use_internal_errors(true);
@@ -551,6 +626,7 @@ class SuratTemplateService
         $xpath = new \DOMXPath($dom);
         $xpath->registerNamespace('w', 'http://schemas.openxmlformats.org/wordprocessingml/2006/main');
         $searchText = $this->normalizeWordText($search);
+        $found = 0;
 
         foreach ($xpath->query('//w:p|//w:tc') as $container) {
             $textNodes = $xpath->query('.//w:t', $container);
@@ -566,6 +642,12 @@ class SuratTemplateService
             }
 
             if (! str_contains($this->normalizeWordText($current), $searchText)) {
+                continue;
+            }
+
+            $found++;
+
+            if ($occurrence !== null && $found !== $occurrence) {
                 continue;
             }
 
@@ -598,6 +680,22 @@ class SuratTemplateService
         }
 
         return $xml;
+    }
+
+    private function markCutiType(string $xml, string $jenisCuti): string
+    {
+        $markers = [
+            'Cuti tahunan' => '1. Cuti Tahunan',
+            'Cuti sakit' => '3. Cuti Sakit',
+            'Cuti melahirkan' => '4. Cuti Melahirkan',
+            'Cuti alasan penting' => '5. Cuti Karena Alasan Penting',
+        ];
+
+        if (! isset($markers[$jenisCuti])) {
+            return $xml;
+        }
+
+        return $this->replaceWordText($xml, $markers[$jenisCuti], $markers[$jenisCuti].' ✓');
     }
 
     private function normalizeWordText(string $value): string
