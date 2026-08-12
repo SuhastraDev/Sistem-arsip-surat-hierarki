@@ -74,6 +74,7 @@ class PengajuanSuratController extends Controller
             'nip' => Auth::user()->nip ?: '-',
             'jabatan' => Auth::user()->jabatan ?: '-',
             'kabid_penandatangan' => $this->kabidPenandatangan(),
+            'surat_tugas_nomor' => $this->generateNomorSuratTugas(),
         ];
         $cutiUsage = [
             'year' => (int) now()->format('Y'),
@@ -101,6 +102,7 @@ class PengajuanSuratController extends Controller
         $cleanFields = $this->templateService->cleanFields($jenisSurat->slug, $fieldData['fields'] ?? []);
         $cleanFields = $this->hydrateSystemFields($jenisSurat->slug, $cleanFields);
         $cleanFields = $this->hydrateNotaDinasFields($jenisSurat->slug, $cleanFields);
+        $cleanFields = $this->hydrateSuratTugasFields($jenisSurat->slug, $cleanFields);
         $cleanFields = $this->attachUploadedFiles($request, $jenisSurat->slug, $cleanFields);
         $quotaSummary = $this->validateCutiQuota($jenisSurat->slug, $cleanFields);
         $posisiAwal = $this->resolvePosisiAwal();
@@ -287,6 +289,28 @@ class PengajuanSuratController extends Controller
         return $fields;
     }
 
+    private function hydrateSuratTugasFields(string $slug, array $fields): array
+    {
+        if ($slug !== 'surat-tugas') {
+            return $fields;
+        }
+
+        $start = $fields['tanggal_mulai_perjalanan'] ?? null;
+        $end = $fields['tanggal_selesai_perjalanan'] ?? null;
+        $days = $this->calculateLeaveDays($start, $end);
+
+        if ($days < 1) {
+            throw ValidationException::withMessages([
+                'fields.tanggal_selesai_perjalanan' => 'Tanggal selesai perjalanan harus sama atau setelah tanggal mulai.',
+            ]);
+        }
+
+        $fields['nomor_surat'] = $this->generateNomorSuratTugas();
+        $fields['lama_perjalanan'] = $days.' hari / '.$this->formatIndonesianDate($start).' s.d. '.$this->formatIndonesianDate($end);
+
+        return $fields;
+    }
+
     private function kabidPenandatangan(): string
     {
         $kabid = User::where('role', 'kabid')->first();
@@ -444,5 +468,24 @@ class PengajuanSuratController extends Controller
             ->count() + 1;
 
         return '500.0.0.0/'.str_pad((string) $countThisYear, 3, '0', STR_PAD_LEFT).'/ND.DISHUT/I/'.$year;
+    }
+
+    private function generateNomorSuratTugas(): string
+    {
+        $year = now()->format('Y');
+        $countThisYear = PengajuanSurat::whereHas('jenisSurat', fn ($query) => $query->where('slug', 'surat-tugas'))
+            ->whereYear('created_at', $year)
+            ->count() + 1;
+
+        return '800.1.11.1/'.str_pad((string) $countThisYear, 3, '0', STR_PAD_LEFT).'/ST/Dishut.III/'.$year;
+    }
+
+    private function formatIndonesianDate(?string $date): string
+    {
+        if (! $date) {
+            return '-';
+        }
+
+        return date('d/m/Y', strtotime($date));
     }
 }

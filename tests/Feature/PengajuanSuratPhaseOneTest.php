@@ -43,13 +43,13 @@ class PengajuanSuratPhaseOneTest extends TestCase
                 'tanggal_pengajuan' => '2026-07-24',
                 'perihal' => 'Permohonan surat tugas monitoring lapangan',
                 'fields' => [
-                    'nomor_surat' => '800.1.11.1/001/ST/Dishut.III/2026',
                     'dasar_pertama' => 'Peraturan Gubernur Sumatera Selatan Nomor 48 Tahun 2016.',
                     'dasar_kedua' => 'Surat Kepala Bappeda Nomor 000.1.5/1517/Bappeda-IV/2026.',
                     'pegawai_berangkat' => 'Mas Asep - NIP 199909062025211021 - Staf Lapangan',
                     'kegiatan' => 'Monitoring kawasan hutan',
                     'tujuan_perjalanan' => 'Kawasan Hutan Lindung',
-                    'lama_perjalanan' => '3 (tiga) hari / 25-27 Juli 2026',
+                    'tanggal_mulai_perjalanan' => '2026-07-25',
+                    'tanggal_selesai_perjalanan' => '2026-07-27',
                     'keterangan_biaya' => 'Biaya dibebankan pada kegiatan terkait.',
                     'kewajiban_laporan' => 'Membuat laporan tertulis setelah pelaksanaan tugas.',
                     'penandatangan' => 'Kepala Bidang Konservasi',
@@ -68,12 +68,81 @@ class PengajuanSuratPhaseOneTest extends TestCase
 
         $this->assertStringStartsWith('PGJ-'.now()->format('Ymd').'-', $pengajuan->nomor_pengajuan);
         $this->assertSame('Monitoring kawasan hutan', $pengajuan->metadata['form_data']['kegiatan']);
+        $this->assertStringStartsWith('800.1.11.1/001/ST/Dishut.III/', $pengajuan->metadata['form_data']['nomor_surat']);
+        $this->assertSame('3 hari / 25/07/2026 s.d. 27/07/2026', $pengajuan->metadata['form_data']['lama_perjalanan']);
     }
 
     public function test_guest_cannot_access_pengajuan_surat(): void
     {
         $this->get(route('pengajuan-surat.index'))
             ->assertRedirect(route('login'));
+    }
+
+    public function test_surat_tugas_system_fields_ignore_manual_values_and_calculate_travel_dates(): void
+    {
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $jenisSurat = JenisSurat::where('slug', 'surat-tugas')->firstOrFail();
+
+        $this->actingAs($staff)
+            ->post(route('pengajuan-surat.store'), [
+                'jenis_surat_id' => $jenisSurat->id,
+                'tanggal_pengajuan' => '2026-09-01',
+                'perihal' => 'Pengajuan surat tugas dengan field sistem',
+                'fields' => [
+                    'nomor_surat' => 'NOMOR-MANUAL-TIDAK-BOLEH-TERPAKAI',
+                    'dasar_pertama' => 'Peraturan Gubernur Sumatera Selatan Nomor 48 Tahun 2016.',
+                    'dasar_kedua' => 'Surat Kepala Bappeda Nomor 000.1.5/1517/Bappeda-IV/2026.',
+                    'pegawai_berangkat' => 'Mas Asep - NIP 199909062025211021 - Staf Lapangan',
+                    'kegiatan' => 'Monitoring kawasan hutan',
+                    'tujuan_perjalanan' => 'Kawasan Hutan Lindung',
+                    'tanggal_mulai_perjalanan' => '2026-09-01',
+                    'tanggal_selesai_perjalanan' => '2026-09-05',
+                    'lama_perjalanan' => '999 hari',
+                    'keterangan_biaya' => '-',
+                    'kewajiban_laporan' => 'Membuat laporan tertulis setelah pelaksanaan tugas.',
+                    'penandatangan' => 'Kabid',
+                ],
+            ])
+            ->assertRedirect(route('pengajuan-surat.index'));
+
+        $formData = PengajuanSurat::firstOrFail()->metadata['form_data'];
+
+        $this->assertStringStartsWith('800.1.11.1/001/ST/Dishut.III/', $formData['nomor_surat']);
+        $this->assertSame('5 hari / 01/09/2026 s.d. 05/09/2026', $formData['lama_perjalanan']);
+    }
+
+    public function test_surat_tugas_rejects_travel_end_date_before_start_date(): void
+    {
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $jenisSurat = JenisSurat::where('slug', 'surat-tugas')->firstOrFail();
+
+        $this->actingAs($staff)
+            ->post(route('pengajuan-surat.store'), [
+                'jenis_surat_id' => $jenisSurat->id,
+                'tanggal_pengajuan' => '2026-09-01',
+                'perihal' => 'Pengajuan surat tugas tanggal tidak valid',
+                'fields' => [
+                    'dasar_pertama' => 'Peraturan Gubernur Sumatera Selatan Nomor 48 Tahun 2016.',
+                    'dasar_kedua' => 'Surat Kepala Bappeda Nomor 000.1.5/1517/Bappeda-IV/2026.',
+                    'pegawai_berangkat' => 'Mas Asep - NIP 199909062025211021 - Staf Lapangan',
+                    'kegiatan' => 'Monitoring kawasan hutan',
+                    'tujuan_perjalanan' => 'Kawasan Hutan Lindung',
+                    'tanggal_mulai_perjalanan' => '2026-09-05',
+                    'tanggal_selesai_perjalanan' => '2026-09-01',
+                    'keterangan_biaya' => '-',
+                    'kewajiban_laporan' => 'Membuat laporan tertulis setelah pelaksanaan tugas.',
+                    'penandatangan' => 'Kabid',
+                ],
+            ])
+            ->assertSessionHasErrors('fields.tanggal_selesai_perjalanan');
+
+        $this->assertDatabaseMissing('pengajuan_surats', [
+            'perihal' => 'Pengajuan surat tugas tanggal tidak valid',
+        ]);
     }
 
     public function test_admin_cannot_create_pengajuan_surat(): void
@@ -607,13 +676,13 @@ class PengajuanSuratPhaseOneTest extends TestCase
                 'tanggal_pengajuan' => '2026-07-25',
                 'perihal' => 'Pengajuan alur approval',
                 'fields' => [
-                    'nomor_surat' => '800.1.11.1/003/ST/Dishut.III/2026',
                     'dasar_pertama' => 'Peraturan Gubernur Sumatera Selatan Nomor 48 Tahun 2016.',
                     'dasar_kedua' => 'Surat Kepala Bappeda Nomor 000.1.5/1517/Bappeda-IV/2026.',
                     'pegawai_berangkat' => 'Mas Asep - NIP 199909062025211021 - Staf Lapangan',
                     'kegiatan' => 'Monitoring kawasan',
                     'tujuan_perjalanan' => 'Hutan Lindung',
-                    'lama_perjalanan' => '2 (dua) hari / 26-27 Juli 2026',
+                    'tanggal_mulai_perjalanan' => '2026-07-26',
+                    'tanggal_selesai_perjalanan' => '2026-07-27',
                     'keterangan_biaya' => '-',
                     'kewajiban_laporan' => 'Melakukan pemantauan',
                     'penandatangan' => 'Kabid',

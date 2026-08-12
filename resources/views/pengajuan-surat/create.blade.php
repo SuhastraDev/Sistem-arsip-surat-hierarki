@@ -111,6 +111,7 @@ $oldFields = old('fields', []);
             'user.jabatan': pegawaiProfile.jabatan,
             'nota.kepada': 'Kepala Dinas Kehutanan Provinsi Sumatera Selatan',
             'nota.kabid': pegawaiProfile.kabid_penandatangan || '',
+            'surat_tugas.nomor_surat': pegawaiProfile.surat_tugas_nomor || '',
         };
 
         function escapeHtml(value) {
@@ -126,6 +127,7 @@ $oldFields = old('fields', []);
             const selected = select.options[select.selectedIndex];
             const slug = selected ? selected.dataset.slug : null;
             const definition = slug ? definitions[slug] : null;
+            submitButton.disabled = false;
 
             if (!definition) {
                 submitButton.disabled = false;
@@ -200,6 +202,14 @@ $oldFields = old('fields', []);
                     </div>
                     <div class="quota-result" id="cutiQuotaResult">Pilih tanggal cuti untuk melihat sisa kuota.</div>
                 </div>` : '';
+            const travelPanel = slug === 'surat-tugas' ? `
+                <div class="quota-panel mx-3 mt-3" id="suratTugasTravelPanel">
+                    <div>
+                        <span>Durasi Perjalanan</span>
+                        <strong id="suratTugasTravelDays">Belum dihitung</strong>
+                    </div>
+                    <div class="quota-result" id="suratTugasTravelResult">Pilih tanggal mulai dan selesai perjalanan.</div>
+                </div>` : '';
 
             panel.innerHTML = `
                 <div class="requirement-panel-header">
@@ -218,10 +228,15 @@ $oldFields = old('fields', []);
                     </div>
                 </div>
                 ${quotaPanel}
+                ${travelPanel}
                 <div class="row g-3 p-3">${fields}</div>`;
 
             if (slug === 'surat-cuti') {
                 bindCutiCalculator();
+            }
+
+            if (slug === 'surat-tugas') {
+                bindSuratTugasCalculator();
             }
         }
 
@@ -280,6 +295,59 @@ $oldFields = old('fields', []);
             endInput.addEventListener('change', updateQuota);
             jenisInput.addEventListener('change', updateQuota);
             updateQuota();
+        }
+
+        function bindSuratTugasCalculator() {
+            const startInput = panel.querySelector('[name="fields[tanggal_mulai_perjalanan]"]');
+            const endInput = panel.querySelector('[name="fields[tanggal_selesai_perjalanan]"]');
+            const lamaInput = panel.querySelector('[name="fields[lama_perjalanan]"]');
+            const daysText = document.getElementById('suratTugasTravelDays');
+            const result = document.getElementById('suratTugasTravelResult');
+
+            function daysBetween(start, end) {
+                if (!start || !end) return 0;
+                const startDate = new Date(`${start}T00:00:00`);
+                const endDate = new Date(`${end}T00:00:00`);
+                if (endDate < startDate) return 0;
+                return Math.floor((endDate - startDate) / 86400000) + 1;
+            }
+
+            function formatDate(value) {
+                if (!value) return '-';
+                const [year, month, day] = value.split('-');
+                return `${day}/${month}/${year}`;
+            }
+
+            function updateTravelDuration() {
+                const requested = daysBetween(startInput.value, endInput.value);
+                submitButton.disabled = false;
+
+                if (!startInput.value || !endInput.value) {
+                    lamaInput.value = '';
+                    daysText.textContent = 'Belum dihitung';
+                    result.className = 'quota-result';
+                    result.textContent = 'Pilih tanggal mulai dan selesai perjalanan.';
+                    return;
+                }
+
+                if (!requested) {
+                    lamaInput.value = '';
+                    daysText.textContent = 'Tanggal belum valid';
+                    result.className = 'quota-result danger';
+                    result.textContent = 'Tanggal selesai harus sama atau setelah tanggal mulai.';
+                    submitButton.disabled = true;
+                    return;
+                }
+
+                lamaInput.value = `${requested} hari / ${formatDate(startInput.value)} s.d. ${formatDate(endInput.value)}`;
+                daysText.textContent = `${requested} hari`;
+                result.className = 'quota-result success';
+                result.textContent = 'Tidak ada kuota perjalanan, durasi hanya dihitung dari tanggal.';
+            }
+
+            startInput.addEventListener('change', updateTravelDuration);
+            endInput.addEventListener('change', updateTravelDuration);
+            updateTravelDuration();
         }
 
         select.addEventListener('change', renderFields);
