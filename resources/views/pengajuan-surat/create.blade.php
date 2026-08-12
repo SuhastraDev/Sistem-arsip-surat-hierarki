@@ -109,6 +109,7 @@ $oldFields = old('fields', []);
             'user.name': pegawaiProfile.name,
             'user.nip': pegawaiProfile.nip,
             'user.jabatan': pegawaiProfile.jabatan,
+            'user.atasan_langsung': pegawaiProfile.atasan_langsung || '',
             'nota.kepada': 'Kepala Dinas Kehutanan Provinsi Sumatera Selatan',
             'nota.kabid': pegawaiProfile.kabid_penandatangan || '',
             'surat_tugas.nomor_surat': pegawaiProfile.surat_tugas_nomor || '',

@@ -414,12 +414,11 @@ class PengajuanSuratPhaseOneTest extends TestCase
                     'jenis_cuti' => 'Cuti tahunan',
                     'tanggal_mulai' => '2026-08-17',
                     'tanggal_selesai' => '2026-08-19',
-                    'masa_kerja' => '1 tahun',
                     'unit_kerja' => 'Dinas Kehutanan Provinsi Sumatera Selatan',
                     'alasan' => 'Keperluan keluarga',
                     'alamat_selama_cuti' => 'Palembang',
                     'telepon' => '081234567890',
-                    'atasan_langsung' => 'Ibu Siti',
+                    'atasan_langsung' => 'Atasan palsu',
                     'lampiran' => UploadedFile::fake()->create('surat-pendukung.pdf', 120, 'application/pdf'),
                 ],
             ])
@@ -431,6 +430,8 @@ class PengajuanSuratPhaseOneTest extends TestCase
         $this->assertSame($staff->name, $formData['nama_pegawai']);
         $this->assertSame($staff->nip, $formData['nip']);
         $this->assertSame($staff->jabatan, $formData['jabatan_unit']);
+        $this->assertSame('Ibu Siti (Kasi) - Kasi Rehabilitasi Hutan', $formData['atasan_langsung']);
+        $this->assertArrayNotHasKey('masa_kerja', $formData);
         $this->assertSame('3 hari', $formData['lama_cuti']);
         $this->assertSame(3, $pengajuan->metadata['cuti_quota']['requested_days']);
         $this->assertSame(9, $pengajuan->metadata['cuti_quota']['remaining_days_after_request']);
@@ -477,12 +478,10 @@ class PengajuanSuratPhaseOneTest extends TestCase
                     'jenis_cuti' => 'Cuti tahunan',
                     'tanggal_mulai' => '2026-08-17',
                     'tanggal_selesai' => '2026-08-19',
-                    'masa_kerja' => '1 tahun',
                     'unit_kerja' => 'Dinas Kehutanan Provinsi Sumatera Selatan',
                     'alasan' => 'Keperluan keluarga',
                     'alamat_selama_cuti' => 'Palembang',
                     'telepon' => '081234567890',
-                    'atasan_langsung' => 'Ibu Siti',
                 ],
             ])
             ->assertRedirect(route('pengajuan-surat.create'))
@@ -506,12 +505,10 @@ class PengajuanSuratPhaseOneTest extends TestCase
                     'jenis_cuti' => 'Cuti tahunan',
                     'tanggal_mulai' => '2026-08-01',
                     'tanggal_selesai' => '2026-08-13',
-                    'masa_kerja' => '1 tahun',
                     'unit_kerja' => 'Dinas Kehutanan Provinsi Sumatera Selatan',
                     'alasan' => 'Keperluan keluarga',
                     'alamat_selama_cuti' => 'Palembang',
                     'telepon' => '081234567890',
-                    'atasan_langsung' => 'Ibu Siti',
                 ],
             ])
             ->assertRedirect(route('pengajuan-surat.create'))

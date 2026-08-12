@@ -73,6 +73,7 @@ class PengajuanSuratController extends Controller
             'name' => Auth::user()->name,
             'nip' => Auth::user()->nip ?: '-',
             'jabatan' => Auth::user()->jabatan ?: '-',
+            'atasan_langsung' => $this->atasanLangsung(),
             'kabid_penandatangan' => $this->kabidPenandatangan(),
             'surat_tugas_nomor' => $this->generateNomorSuratTugas(),
         ];
@@ -268,6 +269,7 @@ class PengajuanSuratController extends Controller
         $fields['nama_pegawai'] = $user->name;
         $fields['nip'] = $user->nip ?: '-';
         $fields['jabatan_unit'] = $user->jabatan ?: '-';
+        $fields['atasan_langsung'] = $this->atasanLangsung();
 
         if (! empty($fields['tanggal_mulai']) && ! empty($fields['tanggal_selesai'])) {
             $fields['lama_cuti'] = $this->calculateLeaveDays($fields['tanggal_mulai'], $fields['tanggal_selesai']).' hari';
@@ -309,6 +311,18 @@ class PengajuanSuratController extends Controller
         $fields['lama_perjalanan'] = $days.' hari / '.$this->formatIndonesianDate($start).' s.d. '.$this->formatIndonesianDate($end);
 
         return $fields;
+    }
+
+    private function atasanLangsung(): string
+    {
+        $user = Auth::user();
+        $atasan = $user->parent_id ? User::find($user->parent_id) : null;
+
+        if (! $atasan) {
+            return 'Kasi belum diatur';
+        }
+
+        return trim($atasan->name.' - '.($atasan->jabatan ?: 'Kasi'));
     }
 
     private function kabidPenandatangan(): string
