@@ -582,8 +582,8 @@
                 <i class="fas fa-file-alt"></i>
             </div>
             <div class="brand-text">
-                <div class="brand-title">E-ARSIP</div>
-                <div class="brand-subtitle">Sistem Arsip Digital</div>
+                <div class="brand-title">Pelacakan Surat</div>
+                <div class="brand-subtitle">Pengajuan dan verifikasi digital</div>
             </div>
         </div>
 
