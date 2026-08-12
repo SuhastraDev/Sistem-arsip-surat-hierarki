@@ -84,7 +84,7 @@
                         <a href="{{ route('pengajuan-surat.index') }}" class="btn btn-light border">
                             <i class="fas fa-arrow-left me-2"></i>Batal
                         </a>
-                        <button class="btn btn-primary px-4 fw-semibold">
+                        <button class="btn btn-primary px-4 fw-semibold" id="submitPengajuanButton">
                             <i class="fas fa-paper-plane me-2"></i>Ajukan Surat
                         </button>
                     </div>
@@ -104,6 +104,7 @@ $oldFields = old('fields', []);
         const cutiUsage = @json($cutiUsage);
         const select = document.querySelector('select[name="jenis_surat_id"]');
         const panel = document.getElementById('requirementPanel');
+        const submitButton = document.getElementById('submitPengajuanButton');
         const systemValues = {
             'user.name': pegawaiProfile.name,
             'user.nip': pegawaiProfile.nip,
@@ -125,6 +126,7 @@ $oldFields = old('fields', []);
             const definition = slug ? definitions[slug] : null;
 
             if (!definition) {
+                submitButton.disabled = false;
                 panel.innerHTML = `
                     <div class="requirement-panel-empty">
                         <i class="fas fa-list-check"></i>
@@ -224,8 +226,10 @@ $oldFields = old('fields', []);
         function bindCutiCalculator() {
             const startInput = panel.querySelector('[name="fields[tanggal_mulai]"]');
             const endInput = panel.querySelector('[name="fields[tanggal_selesai]"]');
+            const jenisInput = panel.querySelector('[name="fields[jenis_cuti]"]');
             const lamaInput = panel.querySelector('[name="fields[lama_cuti]"]');
             const result = document.getElementById('cutiQuotaResult');
+            const usedText = document.getElementById('cutiUsed');
 
             function daysBetween(start, end) {
                 if (!start || !end) return 0;
@@ -237,7 +241,12 @@ $oldFields = old('fields', []);
 
             function updateQuota() {
                 const requested = daysBetween(startInput.value, endInput.value);
-                const remaining = cutiUsage.quota - cutiUsage.used;
+                const startYear = startInput.value ? new Date(`${startInput.value}T00:00:00`).getFullYear() : cutiUsage.year;
+                const used = Number((cutiUsage.by_year || {})[startYear] || (startYear === cutiUsage.year ? cutiUsage.used : 0));
+                const remaining = cutiUsage.quota - used;
+                const isAnnualLeave = jenisInput.value === 'Cuti tahunan';
+                usedText.textContent = used;
+                submitButton.disabled = false;
 
                 if (!requested) {
                     lamaInput.value = '';
@@ -248,9 +257,16 @@ $oldFields = old('fields', []);
 
                 lamaInput.value = `${requested} hari`;
 
-                if (requested > remaining) {
+                if (!isAnnualLeave) {
+                    result.className = 'quota-result';
+                    result.textContent = 'Kuota 12 hari hanya berlaku untuk Cuti tahunan.';
+                    return;
+                }
+
+                if (requested > remaining || requested > cutiUsage.quota) {
                     result.className = 'quota-result danger';
-                    result.textContent = `Melebihi kuota. Sisa ${remaining} hari, pengajuan ini ${requested} hari.`;
+                    result.textContent = `Melebihi kuota tahun ${startYear}. Sisa ${Math.max(remaining, 0)} hari, pengajuan ini ${requested} hari.`;
+                    submitButton.disabled = true;
                     return;
                 }
 
@@ -260,6 +276,7 @@ $oldFields = old('fields', []);
 
             startInput.addEventListener('change', updateQuota);
             endInput.addEventListener('change', updateQuota);
+            jenisInput.addEventListener('change', updateQuota);
             updateQuota();
         }
 

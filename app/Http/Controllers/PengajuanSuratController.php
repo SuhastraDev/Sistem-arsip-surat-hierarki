@@ -78,6 +78,7 @@ class PengajuanSuratController extends Controller
             'year' => (int) now()->format('Y'),
             'quota' => 12,
             'used' => $this->usedAnnualLeaveDays(Auth::id(), (int) now()->format('Y')),
+            'by_year' => $this->annualLeaveUsageByYear(Auth::id()),
         ];
 
         return view('pengajuan-surat.create', compact('jenisSurats', 'templateDefinitions', 'pegawaiProfile', 'cutiUsage'));
@@ -309,6 +310,18 @@ class PengajuanSuratController extends Controller
         $usedDays = $this->usedAnnualLeaveDays(Auth::id(), $year);
         $remainingDays = 12 - $usedDays;
 
+        if ($requestedDays < 1) {
+            throw ValidationException::withMessages([
+                'fields.tanggal_selesai' => 'Tanggal selesai cuti harus sama atau setelah tanggal mulai.',
+            ]);
+        }
+
+        if ($requestedDays > 12) {
+            throw ValidationException::withMessages([
+                'fields.tanggal_selesai' => "Pengajuan cuti tahunan maksimal 12 hari dalam satu tahun. Pengajuan ini {$requestedDays} hari.",
+            ]);
+        }
+
         if ($requestedDays > $remainingDays) {
             throw ValidationException::withMessages([
                 'fields.tanggal_selesai' => "Kuota cuti tahunan tidak mencukupi. Sisa kuota tahun {$year}: {$remainingDays} hari, pengajuan ini {$requestedDays} hari.",
@@ -349,6 +362,32 @@ class PengajuanSuratController extends Controller
 
                 return $this->calculateLeaveDays($data['tanggal_mulai'] ?? null, $data['tanggal_selesai'] ?? null);
             });
+    }
+
+    private function annualLeaveUsageByYear(int $userId): array
+    {
+        $jenisCutiId = JenisSurat::where('slug', 'surat-cuti')->value('id');
+
+        if (! $jenisCutiId) {
+            return [];
+        }
+
+        return PengajuanSurat::where('pemohon_id', $userId)
+            ->where('jenis_surat_id', $jenisCutiId)
+            ->whereNotIn('status', ['ditolak'])
+            ->get()
+            ->reduce(function (array $usage, PengajuanSurat $pengajuan): array {
+                $data = $pengajuan->metadata['form_data'] ?? [];
+
+                if (($data['jenis_cuti'] ?? null) !== 'Cuti tahunan' || empty($data['tanggal_mulai'])) {
+                    return $usage;
+                }
+
+                $year = (int) date('Y', strtotime($data['tanggal_mulai']));
+                $usage[$year] = ($usage[$year] ?? 0) + $this->calculateLeaveDays($data['tanggal_mulai'] ?? null, $data['tanggal_selesai'] ?? null);
+
+                return $usage;
+            }, []);
     }
 
     private function calculateLeaveDays(?string $start, ?string $end): int

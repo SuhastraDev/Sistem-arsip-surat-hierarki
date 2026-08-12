@@ -328,6 +328,39 @@ class PengajuanSuratPhaseOneTest extends TestCase
             ->assertSessionHasErrors('fields.tanggal_selesai');
     }
 
+    public function test_surat_cuti_rejects_single_request_longer_than_annual_quota(): void
+    {
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $jenisSurat = JenisSurat::where('slug', 'surat-cuti')->firstOrFail();
+
+        $this->actingAs($staff)
+            ->from(route('pengajuan-surat.create'))
+            ->post(route('pengajuan-surat.store'), [
+                'jenis_surat_id' => $jenisSurat->id,
+                'tanggal_pengajuan' => '2026-08-12',
+                'perihal' => 'Pengajuan cuti tahunan 13 hari',
+                'fields' => [
+                    'jenis_cuti' => 'Cuti tahunan',
+                    'tanggal_mulai' => '2026-08-01',
+                    'tanggal_selesai' => '2026-08-13',
+                    'masa_kerja' => '1 tahun',
+                    'unit_kerja' => 'Dinas Kehutanan Provinsi Sumatera Selatan',
+                    'alasan' => 'Keperluan keluarga',
+                    'alamat_selama_cuti' => 'Palembang',
+                    'telepon' => '081234567890',
+                    'atasan_langsung' => 'Ibu Siti',
+                ],
+            ])
+            ->assertRedirect(route('pengajuan-surat.create'))
+            ->assertSessionHasErrors('fields.tanggal_selesai');
+
+        $this->assertDatabaseMissing('pengajuan_surats', [
+            'perihal' => 'Pengajuan cuti tahunan 13 hari',
+        ]);
+    }
+
     public function test_staff_can_create_surat_undangan_from_template_folder(): void
     {
         $this->seed();
