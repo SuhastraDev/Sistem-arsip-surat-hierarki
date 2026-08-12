@@ -194,6 +194,7 @@ class PengajuanSuratPhaseOneTest extends TestCase
 
     public function test_staff_can_preview_and_export_pengajuan_template(): void
     {
+        Storage::fake('local');
         $this->seed();
 
         $staff = User::where('role', 'staff')->firstOrFail();
@@ -208,7 +209,7 @@ class PengajuanSuratPhaseOneTest extends TestCase
                     'tembusan' => 'Sekretaris u.b Kasubbag. Perencanaan, Evaluasi dan Pelaporan',
                     'dari' => 'Kepala Bidang Perlindungan dan KSDAE',
                     'tanggal_nota' => '2026-07-24',
-                    'lampiran' => '1 (satu) berkas',
+                    'lampiran' => UploadedFile::fake()->create('lampiran-nota.pdf', 100, 'application/pdf'),
                     'perihal_nota' => 'Koordinasi internal',
                     'isi_nota' => 'Permohonan koordinasi tindak lanjut kegiatan.',
                     'rincian_lampiran' => 'Daftar kegiatan',
@@ -221,11 +222,14 @@ class PengajuanSuratPhaseOneTest extends TestCase
         $this->assertSame('Kepala Dinas Kehutanan Provinsi Sumatera Selatan', $formData['kepada']);
         $this->assertStringStartsWith('500.0.0.0/001/ND.DISHUT/I/', $formData['nomor_nota']);
         $this->assertStringContainsString('Bapak Budi (Kabid)', $formData['penandatangan']);
+        $this->assertSame('lampiran-nota.pdf', $formData['lampiran']['original_name']);
+        Storage::disk('local')->assertExists($formData['lampiran']['path']);
 
         $this->get(route('pengajuan-surat.preview', $pengajuan))
             ->assertOk()
             ->assertSee('Nota Dinas')
             ->assertSee('Koordinasi internal')
+            ->assertSee('lampiran-nota.pdf')
             ->assertSee('Download PDF')
             ->assertSee('Download DOCX');
 
@@ -240,6 +244,7 @@ class PengajuanSuratPhaseOneTest extends TestCase
 
     public function test_nota_dinas_system_fields_ignore_manual_request_values(): void
     {
+        Storage::fake('local');
         $this->seed();
 
         $staff = User::where('role', 'staff')->firstOrFail();
@@ -256,7 +261,7 @@ class PengajuanSuratPhaseOneTest extends TestCase
                     'dari' => 'Bidang Perlindungan dan KSDAE',
                     'tanggal_nota' => '2026-08-12',
                     'nomor_nota' => 'NOMOR PALSU',
-                    'lampiran' => '-',
+                    'lampiran' => UploadedFile::fake()->create('lampiran-manual.pdf', 80, 'application/pdf'),
                     'perihal_nota' => 'Koordinasi',
                     'isi_nota' => 'Isi nota dinas.',
                     'rincian_lampiran' => '-',
@@ -272,6 +277,8 @@ class PengajuanSuratPhaseOneTest extends TestCase
         $this->assertStringContainsString('Bapak Budi (Kabid)', $formData['penandatangan']);
         $this->assertNotSame('NOMOR PALSU', $formData['nomor_nota']);
         $this->assertNotSame('Penandatangan palsu', $formData['penandatangan']);
+        $this->assertSame('lampiran-manual.pdf', $formData['lampiran']['original_name']);
+        Storage::disk('local')->assertExists($formData['lampiran']['path']);
     }
 
     public function test_surat_cuti_uses_account_profile_quota_and_attachment_upload(): void

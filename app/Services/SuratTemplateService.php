@@ -65,7 +65,7 @@ class SuratTemplateService
                     'dari' => ['label' => 'Dari', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: Kepala Bidang Perlindungan dan KSDAE'],
                     'tanggal_nota' => ['label' => 'Tanggal nota', 'type' => 'date', 'required' => true],
                     'nomor_nota' => ['label' => 'Nomor nota', 'type' => 'text', 'required' => true, 'readonly' => true, 'auto_calculated' => true, 'placeholder' => 'Terisi otomatis oleh sistem'],
-                    'lampiran' => ['label' => 'Lampiran', 'type' => 'text', 'required' => false, 'placeholder' => 'Contoh: 1 (satu) berkas'],
+                    'lampiran' => ['label' => 'Lampiran', 'type' => 'file', 'required' => false, 'accept' => '.pdf,.doc,.docx,.jpg,.jpeg,.png', 'placeholder' => 'Upload lampiran nota dinas jika ada'],
                     'perihal_nota' => ['label' => 'Perihal', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: Penyampaian Capaian Indikator Kinerja Kunci (IKK) Bulan Februari 2026'],
                     'isi_nota' => ['label' => 'Isi nota', 'type' => 'textarea', 'required' => true, 'placeholder' => 'Contoh: Menindaklanjuti Nota Dinas Kepala Dinas Kehutanan Nomor ... bersama ini kami sampaikan...'],
                     'rincian_lampiran' => ['label' => 'Rincian lampiran', 'type' => 'textarea', 'required' => false, 'placeholder' => 'Contoh: Tabel capaian indikator, target, capaian bulan ini, capaian s.d bulan ini, dan keterangan.'],
