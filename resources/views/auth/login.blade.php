@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Sistem Arsip Surat Digital</title>
+    <title>Login - Sistem Pelacakan Pengajuan Surat</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -123,29 +123,6 @@
             opacity: 0.9;
             font-weight: 300;
             line-height: 1.6;
-        }
-
-        .features {
-            margin-top: 50px;
-            text-align: left;
-        }
-
-        .feature-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 20px;
-            font-size: 0.95rem;
-        }
-
-        .feature-item i {
-            width: 40px;
-            height: 40px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 15px;
         }
 
         /* Right Side - Login Form */
@@ -372,10 +349,6 @@
                 font-size: 1.8rem;
             }
 
-            .features {
-                display: none;
-            }
-
             .right-panel {
                 padding: 40px 30px;
             }
@@ -434,27 +407,8 @@
                 <div class="brand-logo">
                     <i class="fas fa-file-alt"></i>
                 </div>
-                <h1 class="brand-title">E-ARSIP</h1>
-                <p class="brand-subtitle">Sistem Manajemen Arsip Surat Digital<br>Terintegrasi dan Terpercaya</p>
-
-                <div class="features">
-                    <div class="feature-item">
-                        <i class="fas fa-check"></i>
-                        <span>Pencatatan surat masuk & keluar otomatis</span>
-                    </div>
-                    <div class="feature-item">
-                        <i class="fas fa-check"></i>
-                        <span>Pencarian dokumen cepat dan mudah</span>
-                    </div>
-                    <div class="feature-item">
-                        <i class="fas fa-check"></i>
-                        <span>Keamanan data dengan enkripsi tingkat tinggi</span>
-                    </div>
-                    <div class="feature-item">
-                        <i class="fas fa-check"></i>
-                        <span>Laporan dan statistik real-time</span>
-                    </div>
-                </div>
+                <h1 class="brand-title">Sistem Pelacakan Pengajuan Surat</h1>
+                <p class="brand-subtitle">Pengajuan, pemeriksaan, persetujuan, dan verifikasi dokumen secara digital</p>
             </div>
         </div>
 
@@ -529,7 +483,7 @@
                 </div>
 
                 <div class="footer-text">
-                    <p>&copy; 2024 E-Arsip. Sistem Arsip Digital Profesional</p>
+                    <p>&copy; 2024 Sistem Pelacakan Pengajuan Surat</p>
                 </div>
             </div>
         </div>
