@@ -66,7 +66,7 @@ class PengajuanSuratPhaseOneTest extends TestCase
                     'tanggal_selesai_perjalanan' => '2026-07-27',
                     'keterangan_biaya' => 'Biaya dibebankan pada kegiatan terkait.',
                     'kewajiban_laporan' => 'Membuat laporan tertulis setelah pelaksanaan tugas.',
-                    'penandatangan' => 'Kepala Bidang Konservasi',
+                    'penandatangan' => 'Penandatangan palsu',
                 ],
             ])
             ->assertRedirect(route('pengajuan-surat.index'));
@@ -84,6 +84,7 @@ class PengajuanSuratPhaseOneTest extends TestCase
         $this->assertSame('Monitoring kawasan hutan', $pengajuan->metadata['form_data']['kegiatan']);
         $this->assertStringStartsWith('800.1.11.1/001/ST/Dishut.III/', $pengajuan->metadata['form_data']['nomor_surat']);
         $this->assertSame('3 hari / 25/07/2026 s.d. 27/07/2026', $pengajuan->metadata['form_data']['lama_perjalanan']);
+        $this->assertStringContainsString('Bapak Budi (Kabid)', $pengajuan->metadata['form_data']['penandatangan']);
     }
 
     public function test_guest_cannot_access_pengajuan_surat(): void
@@ -116,7 +117,7 @@ class PengajuanSuratPhaseOneTest extends TestCase
                     'lama_perjalanan' => '999 hari',
                     'keterangan_biaya' => '-',
                     'kewajiban_laporan' => 'Membuat laporan tertulis setelah pelaksanaan tugas.',
-                    'penandatangan' => 'Kabid',
+                    'penandatangan' => 'Penandatangan palsu',
                 ],
             ])
             ->assertRedirect(route('pengajuan-surat.index'));
@@ -125,6 +126,7 @@ class PengajuanSuratPhaseOneTest extends TestCase
 
         $this->assertStringStartsWith('800.1.11.1/001/ST/Dishut.III/', $formData['nomor_surat']);
         $this->assertSame('5 hari / 01/09/2026 s.d. 05/09/2026', $formData['lama_perjalanan']);
+        $this->assertStringContainsString('Bapak Budi (Kabid)', $formData['penandatangan']);
     }
 
     public function test_surat_tugas_rejects_travel_end_date_before_start_date(): void
@@ -149,7 +151,7 @@ class PengajuanSuratPhaseOneTest extends TestCase
                     'tanggal_selesai_perjalanan' => '2026-09-01',
                     'keterangan_biaya' => '-',
                     'kewajiban_laporan' => 'Membuat laporan tertulis setelah pelaksanaan tugas.',
-                    'penandatangan' => 'Kabid',
+                    'penandatangan' => 'Penandatangan palsu',
                 ],
             ])
             ->assertSessionHasErrors('fields.tanggal_selesai_perjalanan');
@@ -369,6 +371,7 @@ class PengajuanSuratPhaseOneTest extends TestCase
         $this->assertStringContainsString('Rina Putri', $documentXml);
         $this->assertStringContainsString('Menghadiri rapat koordinasi pemulihan kawasan.', $documentXml);
         $this->assertStringContainsString('5 hari / 27/07/2026 s.d. 31/07/2026', $documentXml);
+        $this->assertStringContainsString('Bapak Budi (Kabid)', $documentXml);
         $this->assertStringNotContainsString('Sistem E-Arsip Surat Digital', $documentXml);
     }
 
@@ -616,7 +619,7 @@ class PengajuanSuratPhaseOneTest extends TestCase
                     'lama_perjalanan' => '2 (dua) hari / 25-26 Juli 2026',
                     'keterangan_biaya' => '-',
                     'kewajiban_laporan' => 'Melakukan pemantauan',
-                    'penandatangan' => 'Kabid',
+                    'penandatangan' => 'Penandatangan palsu',
                 ],
             ],
         ]);

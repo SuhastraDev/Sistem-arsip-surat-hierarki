@@ -54,7 +54,7 @@ class SuratTemplateService
                     'lama_perjalanan' => ['label' => 'Lama / tanggal perjalanan', 'type' => 'text', 'required' => true, 'readonly' => true, 'auto_calculated' => true, 'placeholder' => 'Terisi otomatis dari tanggal perjalanan'],
                     'keterangan_biaya' => ['label' => 'Keterangan biaya', 'type' => 'textarea', 'required' => false, 'placeholder' => 'Contoh: Biaya kegiatan dibebankan pada Badan Perencanaan Pembangunan Daerah.'],
                     'kewajiban_laporan' => ['label' => 'Kewajiban laporan', 'type' => 'textarea', 'required' => false, 'placeholder' => 'Contoh: Membuat laporan tertulis 1 (satu) minggu setelah pelaksanaan tugas.'],
-                    'penandatangan' => ['label' => 'Penandatangan', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: SUSILO HARTONO, S.Hut., M.Si - Sekretaris'],
+                    'penandatangan' => ['label' => 'Penandatangan', 'type' => 'text', 'required' => true, 'readonly' => true, 'source' => 'nota.kabid', 'placeholder' => 'Terisi otomatis oleh sistem'],
                 ],
             ],
             'nota-dinas' => [

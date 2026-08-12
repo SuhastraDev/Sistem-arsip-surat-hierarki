@@ -309,6 +309,7 @@ class PengajuanSuratController extends Controller
 
         $fields['nomor_surat'] = $this->generateNomorSuratTugas();
         $fields['lama_perjalanan'] = $days.' hari / '.$this->formatIndonesianDate($start).' s.d. '.$this->formatIndonesianDate($end);
+        $fields['penandatangan'] = $this->kabidPenandatangan();
 
         return $fields;
     }
