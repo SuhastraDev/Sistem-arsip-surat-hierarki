@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\User;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
@@ -13,6 +13,7 @@ class UserSeeder extends Seeder
         // 1. BUAT ADMIN
         User::create([
             'name' => 'Administrator',
+            'nip' => null,
             'email' => 'admin@dishut.com',
             'password' => Hash::make('password'), // passwordnya: password
             'role' => 'admin',
@@ -22,6 +23,7 @@ class UserSeeder extends Seeder
         // 2. BUAT KABID (Kepala Bidang)
         $kabid = User::create([
             'name' => 'Bapak Budi (Kabid)',
+            'nip' => '197801012006041001',
             'email' => 'kabid@dishut.com',
             'password' => Hash::make('password'),
             'role' => 'kabid',
@@ -32,6 +34,7 @@ class UserSeeder extends Seeder
         // Perhatikan 'parent_id' mengambil id dari $kabid
         $kasi = User::create([
             'name' => 'Ibu Siti (Kasi)',
+            'nip' => '198203152010012002',
             'email' => 'kasi@dishut.com',
             'password' => Hash::make('password'),
             'role' => 'kasi',
@@ -43,6 +46,7 @@ class UserSeeder extends Seeder
         // Perhatikan 'parent_id' mengambil id dari $kasi
         User::create([
             'name' => 'Mas Asep (Staf)',
+            'nip' => '199909062025211021',
             'email' => 'staf@dishut.com',
             'password' => Hash::make('password'),
             'role' => 'staff',
@@ -53,6 +57,7 @@ class UserSeeder extends Seeder
         // Buat satu staf lagi biar ramai
         User::create([
             'name' => 'Mba Dewi (Staf)',
+            'nip' => '199610142020122003',
             'email' => 'staf2@dishut.com',
             'password' => Hash::make('password'),
             'role' => 'staff',

@@ -47,7 +47,7 @@
                 </div>
                 @endif
 
-                <form action="{{ route('pengajuan-surat.store') }}" method="POST">
+                <form action="{{ route('pengajuan-surat.store') }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <div class="mb-4">
                         <label class="form-label fw-semibold">Jenis Surat</label>
@@ -100,8 +100,15 @@ $oldFields = old('fields', []);
     document.addEventListener('DOMContentLoaded', function() {
         const definitions = @json($templateDefinitions);
         const oldFields = @json($oldFields);
+        const pegawaiProfile = @json($pegawaiProfile);
+        const cutiUsage = @json($cutiUsage);
         const select = document.querySelector('select[name="jenis_surat_id"]');
         const panel = document.getElementById('requirementPanel');
+        const systemValues = {
+            'user.name': pegawaiProfile.name,
+            'user.nip': pegawaiProfile.nip,
+            'user.jabatan': pegawaiProfile.jabatan,
+        };
 
         function escapeHtml(value) {
             return String(value || '')
@@ -130,14 +137,29 @@ $oldFields = old('fields', []);
             const fields = Object.entries(definition.fields).map(([name, field]) => {
                 const required = field.required ? 'required' : '';
                 const requiredMark = field.required ? '<span class="text-danger">*</span>' : '';
-                const value = escapeHtml(oldFields[name] || '');
+                const systemValue = field.source ? (systemValues[field.source] || '') : '';
+                const value = escapeHtml(oldFields[name] || systemValue || '');
                 const placeholder = escapeHtml(field.placeholder || '');
+                const readonly = field.readonly ? 'readonly' : '';
+                const helper = field.readonly ? '<div class="form-text">Terisi otomatis dari data akun pegawai.</div>' : '';
+
+                if (field.type === 'file') {
+                    const accept = escapeHtml(field.accept || '');
+
+                    return `
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">${field.label} ${requiredMark}</label>
+                            <input type="file" name="fields[${name}]" class="form-control" accept="${accept}" ${required}>
+                            <div class="form-text">${placeholder || 'Upload dokumen pendukung jika diperlukan.'} Maksimal 5 MB.</div>
+                        </div>`;
+                }
 
                 if (field.type === 'textarea') {
                     return `
                         <div class="col-12">
                             <label class="form-label fw-semibold">${field.label} ${requiredMark}</label>
-                            <textarea name="fields[${name}]" class="form-control" rows="3" placeholder="${placeholder}" ${required}>${value}</textarea>
+                            <textarea name="fields[${name}]" class="form-control" rows="3" placeholder="${placeholder}" ${required} ${readonly}>${value}</textarea>
+                            ${helper}
                         </div>`;
                 }
 
@@ -161,9 +183,19 @@ $oldFields = old('fields', []);
                 return `
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">${field.label} ${requiredMark}</label>
-                        <input type="${field.type}" name="fields[${name}]" class="form-control" value="${value}" placeholder="${placeholder}" ${required}>
+                        <input type="${field.type}" name="fields[${name}]" class="form-control" value="${value}" placeholder="${placeholder}" ${required} ${readonly}>
+                        ${helper}
                     </div>`;
             }).join('');
+
+            const quotaPanel = slug === 'surat-cuti' ? `
+                <div class="quota-panel mx-3 mt-3" id="cutiQuotaPanel">
+                    <div>
+                        <span>Kuota Cuti Tahunan</span>
+                        <strong><span id="cutiUsed">${cutiUsage.used}</span> / ${cutiUsage.quota} hari terpakai</strong>
+                    </div>
+                    <div class="quota-result" id="cutiQuotaResult">Pilih tanggal cuti untuk melihat sisa kuota.</div>
+                </div>` : '';
 
             panel.innerHTML = `
                 <div class="requirement-panel-header">
@@ -181,7 +213,54 @@ $oldFields = old('fields', []);
                         <p>${escapeHtml(definition.template_note || 'Data yang diisi akan mengikuti struktur template ini.')}</p>
                     </div>
                 </div>
+                ${quotaPanel}
                 <div class="row g-3 p-3">${fields}</div>`;
+
+            if (slug === 'surat-cuti') {
+                bindCutiCalculator();
+            }
+        }
+
+        function bindCutiCalculator() {
+            const startInput = panel.querySelector('[name="fields[tanggal_mulai]"]');
+            const endInput = panel.querySelector('[name="fields[tanggal_selesai]"]');
+            const lamaInput = panel.querySelector('[name="fields[lama_cuti]"]');
+            const result = document.getElementById('cutiQuotaResult');
+
+            function daysBetween(start, end) {
+                if (!start || !end) return 0;
+                const startDate = new Date(`${start}T00:00:00`);
+                const endDate = new Date(`${end}T00:00:00`);
+                if (endDate < startDate) return 0;
+                return Math.floor((endDate - startDate) / 86400000) + 1;
+            }
+
+            function updateQuota() {
+                const requested = daysBetween(startInput.value, endInput.value);
+                const remaining = cutiUsage.quota - cutiUsage.used;
+
+                if (!requested) {
+                    lamaInput.value = '';
+                    result.className = 'quota-result';
+                    result.textContent = 'Pilih tanggal cuti untuk melihat sisa kuota.';
+                    return;
+                }
+
+                lamaInput.value = `${requested} hari`;
+
+                if (requested > remaining) {
+                    result.className = 'quota-result danger';
+                    result.textContent = `Melebihi kuota. Sisa ${remaining} hari, pengajuan ini ${requested} hari.`;
+                    return;
+                }
+
+                result.className = 'quota-result success';
+                result.textContent = `Aman. Setelah pengajuan ini sisa kuota ${remaining - requested} hari.`;
+            }
+
+            startInput.addEventListener('change', updateQuota);
+            endInput.addEventListener('change', updateQuota);
+            updateQuota();
         }
 
         select.addEventListener('change', renderFields);
@@ -324,9 +403,68 @@ $oldFields = old('fields', []);
         margin: 2px 0 0;
     }
 
+    .quota-panel {
+        align-items: center;
+        background: #fffdf8;
+        border: 1px solid #f1dca7;
+        border-radius: 8px;
+        display: flex;
+        gap: 12px;
+        justify-content: space-between;
+        padding: 12px 14px;
+    }
+
+    .quota-panel span {
+        color: #92400e;
+        display: block;
+        font-size: .68rem;
+        font-weight: 900;
+        letter-spacing: .1em;
+        text-transform: uppercase;
+    }
+
+    .quota-panel strong {
+        color: #102033;
+        display: block;
+        font-size: .92rem;
+    }
+
+    .quota-result {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 999px;
+        color: #64748b;
+        font-size: .8rem;
+        font-weight: 800;
+        padding: 7px 11px;
+        text-align: right;
+    }
+
+    .quota-result.success {
+        background: #ecfdf5;
+        border-color: #bbf7d0;
+        color: #166534;
+    }
+
+    .quota-result.danger {
+        background: #fef2f2;
+        border-color: #fecaca;
+        color: #991b1b;
+    }
+
     @media (max-width: 768px) {
         .process-strip {
             grid-template-columns: 1fr;
+        }
+
+        .quota-panel {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .quota-result {
+            border-radius: 8px;
+            text-align: left;
         }
     }
 </style>

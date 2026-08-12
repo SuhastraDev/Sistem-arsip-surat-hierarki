@@ -198,7 +198,16 @@ $verificationUrl = $verificationCode ? route('verification.show', $verificationC
                 @foreach($templateRows as $row)
                 <div class="requirement-row">
                     <span>{{ $row['label'] }}</span>
+                    @php
+                    $rawValue = $pengajuanSurat->metadata['form_data'][$row['key']] ?? null;
+                    @endphp
+                    @if(is_array($rawValue) && isset($rawValue['original_name']))
+                    <a href="{{ route('pengajuan-surat.attachment', [$pengajuanSurat, $row['key']]) }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-paperclip me-1"></i>{{ $rawValue['original_name'] }}
+                    </a>
+                    @else
                     <strong>{{ $row['value'] }}</strong>
+                    @endif
                 </div>
                 @endforeach
             </div>

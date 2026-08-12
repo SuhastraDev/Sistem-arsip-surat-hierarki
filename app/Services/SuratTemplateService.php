@@ -20,20 +20,20 @@ class SuratTemplateService
                 'template_label' => 'SURAT CUTII_GUSTI_2026.docx',
                 'template_note' => 'Template resmi cuti: data pegawai, jenis cuti, alasan, alamat, dan pertimbangan atasan.',
                 'fields' => [
-                    'nama_pegawai' => ['label' => 'Nama pegawai', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: Mas Asep'],
-                    'nip' => ['label' => 'NIP', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: 19870512 201001 1 002'],
-                    'jabatan_unit' => ['label' => 'Jabatan / unit kerja', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: Staf Administrasi - Seksi Rehabilitasi Hutan'],
+                    'nama_pegawai' => ['label' => 'Nama pegawai', 'type' => 'text', 'required' => true, 'readonly' => true, 'source' => 'user.name', 'placeholder' => 'Terisi otomatis dari akun'],
+                    'nip' => ['label' => 'NIP', 'type' => 'text', 'required' => true, 'readonly' => true, 'source' => 'user.nip', 'placeholder' => 'Terisi otomatis dari akun'],
+                    'jabatan_unit' => ['label' => 'Jabatan / unit kerja', 'type' => 'text', 'required' => true, 'readonly' => true, 'source' => 'user.jabatan', 'placeholder' => 'Terisi otomatis dari akun'],
                     'masa_kerja' => ['label' => 'Masa kerja', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: 12 tahun 4 bulan'],
                     'unit_kerja' => ['label' => 'Unit kerja', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: Dinas Kehutanan Provinsi Sumatera Selatan'],
                     'jenis_cuti' => ['label' => 'Jenis cuti', 'type' => 'select', 'required' => true, 'options' => ['Cuti tahunan', 'Cuti sakit', 'Cuti melahirkan', 'Cuti alasan penting']],
                     'tanggal_mulai' => ['label' => 'Tanggal mulai', 'type' => 'date', 'required' => true],
                     'tanggal_selesai' => ['label' => 'Tanggal selesai', 'type' => 'date', 'required' => true],
-                    'lama_cuti' => ['label' => 'Lama cuti', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: 5 hari kerja'],
+                    'lama_cuti' => ['label' => 'Lama cuti', 'type' => 'text', 'required' => true, 'readonly' => true, 'auto_calculated' => true, 'placeholder' => 'Terisi otomatis dari tanggal mulai dan selesai'],
                     'alasan' => ['label' => 'Alasan cuti', 'type' => 'textarea', 'required' => true, 'placeholder' => 'Contoh: Keperluan keluarga di luar kota'],
                     'alamat_selama_cuti' => ['label' => 'Alamat selama cuti', 'type' => 'textarea', 'required' => true, 'placeholder' => 'Contoh: Jl. Merdeka No. 10, Bandung'],
                     'telepon' => ['label' => 'Telepon', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: 0812-3456-7890'],
                     'atasan_langsung' => ['label' => 'Atasan langsung', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: Ibu Siti - Kasi Rehabilitasi Hutan'],
-                    'lampiran' => ['label' => 'Lampiran', 'type' => 'text', 'required' => false, 'placeholder' => 'Contoh: Surat dokter / dokumen pendukung, jika ada'],
+                    'lampiran' => ['label' => 'Lampiran', 'type' => 'file', 'required' => false, 'accept' => '.pdf,.doc,.docx,.jpg,.jpeg,.png', 'placeholder' => 'Upload surat dokter atau dokumen pendukung jika ada'],
                 ],
             ],
             'surat-tugas' => [
@@ -102,7 +102,21 @@ class SuratTemplateService
         $rules = [];
 
         foreach ($this->fields($slug) as $key => $field) {
-            $rules['fields.'.$key] = [($field['required'] ?? false) ? 'required' : 'nullable', 'string', 'max:2000'];
+            $isServerFilled = isset($field['source']) || ($field['auto_calculated'] ?? false);
+            $presenceRule = (($field['required'] ?? false) && ! $isServerFilled) ? 'required' : 'nullable';
+
+            if (($field['type'] ?? null) === 'file') {
+                $rules['fields.'.$key] = [
+                    $presenceRule,
+                    'file',
+                    'mimes:pdf,doc,docx,jpg,jpeg,png',
+                    'max:5120',
+                ];
+
+                continue;
+            }
+
+            $rules['fields.'.$key] = [$presenceRule, 'string', 'max:2000'];
         }
 
         return $rules;
@@ -143,11 +157,21 @@ class SuratTemplateService
 
         return collect($this->fields($slug))
             ->map(fn ($field, $key) => [
+                'key' => $key,
                 'label' => $field['label'],
-                'value' => $data[$key] ?? '-',
+                'value' => $this->displayValue($data[$key] ?? null),
             ])
             ->values()
             ->all();
+    }
+
+    private function displayValue(mixed $value): string
+    {
+        if (is_array($value)) {
+            return $value['original_name'] ?? $value['name'] ?? '-';
+        }
+
+        return filled($value) ? (string) $value : '-';
     }
 
     public function downloadPdf(PengajuanSurat $pengajuanSurat): Response
@@ -308,13 +332,13 @@ class SuratTemplateService
         $stream .= "0 0 0 rg\n";
 
         foreach ($barcode as [$offset, $width]) {
-            $stream .= ($x + ($offset * $module))." ".$y." ".($width * $module)." ".$height." re f\n";
+            $stream .= ($x + ($offset * $module)).' '.$y.' '.($width * $module).' '.$height." re f\n";
         }
 
         $safeCode = str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], $verificationCode);
-        $stream .= "BT\n/F1 8 Tf\n".($x + 22)." ".($y - 12)." Td\n($safeCode) Tj\nET\n";
-        $stream .= "BT\n/F1 8 Tf\n".($x + 6)." ".($y - 26)." Td\n(Scan barcode / verifikasi kode) Tj\nET\n";
-        $stream .= "BT\n/F1 10 Tf\n".($x + 8)." ".($topY - 96)." Td\n($signerName) Tj\nET\n";
+        $stream .= "BT\n/F1 8 Tf\n".($x + 22).' '.($y - 12)." Td\n($safeCode) Tj\nET\n";
+        $stream .= "BT\n/F1 8 Tf\n".($x + 6).' '.($y - 26)." Td\n(Scan barcode / verifikasi kode) Tj\nET\n";
+        $stream .= "BT\n/F1 10 Tf\n".($x + 8).' '.($topY - 96)." Td\n($signerName) Tj\nET\n";
         $stream .= "Q\n";
 
         return $stream;

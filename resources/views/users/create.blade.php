@@ -65,6 +65,18 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">
+                                    NIP
+                                </label>
+                                <input type="text" name="nip" class="form-control"
+                                    placeholder="Contoh: 198705122010011002"
+                                    value="{{ old('nip') }}">
+                                <small class="text-muted">Dipakai otomatis di form cuti pegawai</small>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mt-2">
+                            <div class="col-md-6">
+                                <label class="form-label">
                                     Jabatan Dinas <span class="text-danger">*</span>
                                 </label>
                                 <input type="text" name="jabatan" class="form-control"

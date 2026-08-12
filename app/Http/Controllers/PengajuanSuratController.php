@@ -11,6 +11,8 @@ use App\Services\PengajuanApprovalService;
 use App\Services\SuratTemplateService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use RuntimeException;
 
 class PengajuanSuratController extends Controller
@@ -67,8 +69,18 @@ class PengajuanSuratController extends Controller
 
         $jenisSurats = JenisSurat::aktif()->orderBy('nama')->get();
         $templateDefinitions = $this->templateService->definitions();
+        $pegawaiProfile = [
+            'name' => Auth::user()->name,
+            'nip' => Auth::user()->nip ?: '-',
+            'jabatan' => Auth::user()->jabatan ?: '-',
+        ];
+        $cutiUsage = [
+            'year' => (int) now()->format('Y'),
+            'quota' => 12,
+            'used' => $this->usedAnnualLeaveDays(Auth::id(), (int) now()->format('Y')),
+        ];
 
-        return view('pengajuan-surat.create', compact('jenisSurats', 'templateDefinitions'));
+        return view('pengajuan-surat.create', compact('jenisSurats', 'templateDefinitions', 'pegawaiProfile', 'cutiUsage'));
     }
 
     public function store(Request $request)
@@ -85,6 +97,9 @@ class PengajuanSuratController extends Controller
         $templateDefinition = $this->templateService->definition($jenisSurat->slug);
         $fieldData = $request->validate($this->templateService->validationRules($jenisSurat->slug));
         $cleanFields = $this->templateService->cleanFields($jenisSurat->slug, $fieldData['fields'] ?? []);
+        $cleanFields = $this->hydrateSystemFields($jenisSurat->slug, $cleanFields);
+        $cleanFields = $this->attachUploadedFiles($request, $jenisSurat->slug, $cleanFields);
+        $quotaSummary = $this->validateCutiQuota($jenisSurat->slug, $cleanFields);
         $posisiAwal = $this->resolvePosisiAwal();
 
         if (! $posisiAwal) {
@@ -104,6 +119,7 @@ class PengajuanSuratController extends Controller
             'metadata' => [
                 'fase' => 'fase_2',
                 'form_data' => $cleanFields,
+                'cuti_quota' => $quotaSummary,
                 'template_source' => $templateDefinition['template_label'] ?? 'Template sistem',
                 'template_format' => ['pdf', 'docx'],
                 'catatan' => 'Form persyaratan mengikuti template resmi yang disediakan. Output unduhan disediakan dalam PDF dan DOCX.',
@@ -202,6 +218,18 @@ class PengajuanSuratController extends Controller
         };
     }
 
+    public function attachment(PengajuanSurat $pengajuanSurat, string $field)
+    {
+        $pengajuanSurat->load(['jenisSurat', 'pemohon', 'posisi', 'digitalSignature.signer']);
+        $this->authorizeView($pengajuanSurat);
+
+        $attachment = $pengajuanSurat->metadata['form_data'][$field] ?? null;
+        abort_unless(is_array($attachment) && isset($attachment['path']), 404);
+        abort_unless(Storage::disk('local')->exists($attachment['path']), 404);
+
+        return Storage::disk('local')->download($attachment['path'], $attachment['original_name'] ?? null);
+    }
+
     private function authorizeView(PengajuanSurat $pengajuanSurat): void
     {
         $user = Auth::user();
@@ -223,6 +251,116 @@ class PengajuanSuratController extends Controller
         }
 
         return null;
+    }
+
+    private function hydrateSystemFields(string $slug, array $fields): array
+    {
+        if ($slug !== 'surat-cuti') {
+            return $fields;
+        }
+
+        $user = Auth::user();
+        $fields['nama_pegawai'] = $user->name;
+        $fields['nip'] = $user->nip ?: '-';
+        $fields['jabatan_unit'] = $user->jabatan ?: '-';
+
+        if (! empty($fields['tanggal_mulai']) && ! empty($fields['tanggal_selesai'])) {
+            $fields['lama_cuti'] = $this->calculateLeaveDays($fields['tanggal_mulai'], $fields['tanggal_selesai']).' hari';
+        }
+
+        return $fields;
+    }
+
+    private function attachUploadedFiles(Request $request, string $slug, array $fields): array
+    {
+        foreach ($this->templateService->fields($slug) as $key => $field) {
+            if (($field['type'] ?? null) !== 'file' || ! $request->hasFile('fields.'.$key)) {
+                continue;
+            }
+
+            $file = $request->file('fields.'.$key);
+            $path = $file->store('pengajuan-lampiran/'.now()->format('Y/m'), 'local');
+            $fields[$key] = [
+                'original_name' => $file->getClientOriginalName(),
+                'path' => $path,
+                'mime' => $file->getClientMimeType(),
+                'size' => $file->getSize(),
+            ];
+        }
+
+        return $fields;
+    }
+
+    private function validateCutiQuota(string $slug, array $fields): ?array
+    {
+        if ($slug !== 'surat-cuti' || ($fields['jenis_cuti'] ?? null) !== 'Cuti tahunan') {
+            return null;
+        }
+
+        $start = $fields['tanggal_mulai'] ?? null;
+        $end = $fields['tanggal_selesai'] ?? null;
+
+        if (! $start || ! $end) {
+            return null;
+        }
+
+        $requestedDays = $this->calculateLeaveDays($start, $end);
+        $year = (int) date('Y', strtotime($start));
+        $usedDays = $this->usedAnnualLeaveDays(Auth::id(), $year);
+        $remainingDays = 12 - $usedDays;
+
+        if ($requestedDays > $remainingDays) {
+            throw ValidationException::withMessages([
+                'fields.tanggal_selesai' => "Kuota cuti tahunan tidak mencukupi. Sisa kuota tahun {$year}: {$remainingDays} hari, pengajuan ini {$requestedDays} hari.",
+            ]);
+        }
+
+        return [
+            'year' => $year,
+            'annual_quota' => 12,
+            'used_days_before_request' => $usedDays,
+            'requested_days' => $requestedDays,
+            'remaining_days_after_request' => $remainingDays - $requestedDays,
+        ];
+    }
+
+    private function usedAnnualLeaveDays(int $userId, int $year): int
+    {
+        $jenisCutiId = JenisSurat::where('slug', 'surat-cuti')->value('id');
+
+        if (! $jenisCutiId) {
+            return 0;
+        }
+
+        return PengajuanSurat::where('pemohon_id', $userId)
+            ->where('jenis_surat_id', $jenisCutiId)
+            ->whereNotIn('status', ['ditolak'])
+            ->get()
+            ->sum(function (PengajuanSurat $pengajuan) use ($year): int {
+                $data = $pengajuan->metadata['form_data'] ?? [];
+
+                if (($data['jenis_cuti'] ?? null) !== 'Cuti tahunan') {
+                    return 0;
+                }
+
+                if ((int) date('Y', strtotime($data['tanggal_mulai'] ?? '')) !== $year) {
+                    return 0;
+                }
+
+                return $this->calculateLeaveDays($data['tanggal_mulai'] ?? null, $data['tanggal_selesai'] ?? null);
+            });
+    }
+
+    private function calculateLeaveDays(?string $start, ?string $end): int
+    {
+        if (! $start || ! $end || strtotime($end) < strtotime($start)) {
+            return 0;
+        }
+
+        $startDate = new \DateTimeImmutable($start);
+        $endDate = new \DateTimeImmutable($end);
+
+        return $startDate->diff($endDate)->days + 1;
     }
 
     private function generateNomorPengajuan(): string

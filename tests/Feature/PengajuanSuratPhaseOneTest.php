@@ -236,6 +236,98 @@ class PengajuanSuratPhaseOneTest extends TestCase
             ->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     }
 
+    public function test_surat_cuti_uses_account_profile_quota_and_attachment_upload(): void
+    {
+        Storage::fake('local');
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $jenisSurat = JenisSurat::where('slug', 'surat-cuti')->firstOrFail();
+
+        $this->actingAs($staff)
+            ->post(route('pengajuan-surat.store'), [
+                'jenis_surat_id' => $jenisSurat->id,
+                'tanggal_pengajuan' => '2026-08-12',
+                'perihal' => 'Pengajuan cuti tahunan',
+                'fields' => [
+                    'jenis_cuti' => 'Cuti tahunan',
+                    'tanggal_mulai' => '2026-08-17',
+                    'tanggal_selesai' => '2026-08-19',
+                    'masa_kerja' => '1 tahun',
+                    'unit_kerja' => 'Dinas Kehutanan Provinsi Sumatera Selatan',
+                    'alasan' => 'Keperluan keluarga',
+                    'alamat_selama_cuti' => 'Palembang',
+                    'telepon' => '081234567890',
+                    'atasan_langsung' => 'Ibu Siti',
+                    'lampiran' => UploadedFile::fake()->create('surat-pendukung.pdf', 120, 'application/pdf'),
+                ],
+            ])
+            ->assertRedirect(route('pengajuan-surat.index'));
+
+        $pengajuan = PengajuanSurat::firstOrFail();
+        $formData = $pengajuan->metadata['form_data'];
+
+        $this->assertSame($staff->name, $formData['nama_pegawai']);
+        $this->assertSame($staff->nip, $formData['nip']);
+        $this->assertSame($staff->jabatan, $formData['jabatan_unit']);
+        $this->assertSame('3 hari', $formData['lama_cuti']);
+        $this->assertSame(3, $pengajuan->metadata['cuti_quota']['requested_days']);
+        $this->assertSame(9, $pengajuan->metadata['cuti_quota']['remaining_days_after_request']);
+        $this->assertSame('surat-pendukung.pdf', $formData['lampiran']['original_name']);
+        Storage::disk('local')->assertExists($formData['lampiran']['path']);
+
+        $this->get(route('pengajuan-surat.show', $pengajuan))
+            ->assertOk()
+            ->assertSee('surat-pendukung.pdf');
+    }
+
+    public function test_surat_cuti_rejects_request_that_exceeds_annual_quota(): void
+    {
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $jenisSurat = JenisSurat::where('slug', 'surat-cuti')->firstOrFail();
+
+        PengajuanSurat::create([
+            'jenis_surat_id' => $jenisSurat->id,
+            'pemohon_id' => $staff->id,
+            'nomor_pengajuan' => 'PGJ-20260101-0001',
+            'tanggal_pengajuan' => '2026-01-01',
+            'perihal' => 'Cuti tahunan sebelumnya',
+            'status' => 'selesai',
+            'posisi_saat_ini' => $staff->id,
+            'metadata' => [
+                'form_data' => [
+                    'jenis_cuti' => 'Cuti tahunan',
+                    'tanggal_mulai' => '2026-01-06',
+                    'tanggal_selesai' => '2026-01-15',
+                    'lama_cuti' => '10 hari',
+                ],
+            ],
+        ]);
+
+        $this->actingAs($staff)
+            ->from(route('pengajuan-surat.create'))
+            ->post(route('pengajuan-surat.store'), [
+                'jenis_surat_id' => $jenisSurat->id,
+                'tanggal_pengajuan' => '2026-08-12',
+                'perihal' => 'Pengajuan cuti tahunan melebihi kuota',
+                'fields' => [
+                    'jenis_cuti' => 'Cuti tahunan',
+                    'tanggal_mulai' => '2026-08-17',
+                    'tanggal_selesai' => '2026-08-19',
+                    'masa_kerja' => '1 tahun',
+                    'unit_kerja' => 'Dinas Kehutanan Provinsi Sumatera Selatan',
+                    'alasan' => 'Keperluan keluarga',
+                    'alamat_selama_cuti' => 'Palembang',
+                    'telepon' => '081234567890',
+                    'atasan_langsung' => 'Ibu Siti',
+                ],
+            ])
+            ->assertRedirect(route('pengajuan-surat.create'))
+            ->assertSessionHasErrors('fields.tanggal_selesai');
+    }
+
     public function test_staff_can_create_surat_undangan_from_template_folder(): void
     {
         $this->seed();
