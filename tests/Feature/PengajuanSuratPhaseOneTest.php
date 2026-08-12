@@ -205,20 +205,22 @@ class PengajuanSuratPhaseOneTest extends TestCase
                 'tanggal_pengajuan' => '2026-07-24',
                 'perihal' => 'Nota dinas koordinasi internal',
                 'fields' => [
-                    'kepada' => 'Kepala Dinas Kehutanan Provinsi Sumatera Selatan',
                     'tembusan' => 'Sekretaris u.b Kasubbag. Perencanaan, Evaluasi dan Pelaporan',
                     'dari' => 'Kepala Bidang Perlindungan dan KSDAE',
                     'tanggal_nota' => '2026-07-24',
-                    'nomor_nota' => '500.0.0.0/001/ND.DISHUT/I/2026',
                     'lampiran' => '1 (satu) berkas',
                     'perihal_nota' => 'Koordinasi internal',
                     'isi_nota' => 'Permohonan koordinasi tindak lanjut kegiatan.',
                     'rincian_lampiran' => 'Daftar kegiatan',
-                    'penandatangan' => 'Kepala Bidang Perlindungan dan KSDAE',
                 ],
             ]);
 
         $pengajuan = PengajuanSurat::firstOrFail();
+        $formData = $pengajuan->metadata['form_data'];
+
+        $this->assertSame('Kepala Dinas Kehutanan Provinsi Sumatera Selatan', $formData['kepada']);
+        $this->assertStringStartsWith('500.0.0.0/001/ND.DISHUT/I/', $formData['nomor_nota']);
+        $this->assertStringContainsString('Bapak Budi (Kabid)', $formData['penandatangan']);
 
         $this->get(route('pengajuan-surat.preview', $pengajuan))
             ->assertOk()
@@ -234,6 +236,42 @@ class PengajuanSuratPhaseOneTest extends TestCase
         $this->get(route('pengajuan-surat.export', [$pengajuan, 'docx']))
             ->assertOk()
             ->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    }
+
+    public function test_nota_dinas_system_fields_ignore_manual_request_values(): void
+    {
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $jenisSurat = JenisSurat::where('slug', 'nota-dinas')->firstOrFail();
+
+        $this->actingAs($staff)
+            ->post(route('pengajuan-surat.store'), [
+                'jenis_surat_id' => $jenisSurat->id,
+                'tanggal_pengajuan' => '2026-08-12',
+                'perihal' => 'Nota dinas otomatis',
+                'fields' => [
+                    'kepada' => 'Input manual tidak boleh dipakai',
+                    'tembusan' => '-',
+                    'dari' => 'Bidang Perlindungan dan KSDAE',
+                    'tanggal_nota' => '2026-08-12',
+                    'nomor_nota' => 'NOMOR PALSU',
+                    'lampiran' => '-',
+                    'perihal_nota' => 'Koordinasi',
+                    'isi_nota' => 'Isi nota dinas.',
+                    'rincian_lampiran' => '-',
+                    'penandatangan' => 'Penandatangan palsu',
+                ],
+            ])
+            ->assertRedirect(route('pengajuan-surat.index'));
+
+        $formData = PengajuanSurat::firstOrFail()->metadata['form_data'];
+
+        $this->assertSame('Kepala Dinas Kehutanan Provinsi Sumatera Selatan', $formData['kepada']);
+        $this->assertStringStartsWith('500.0.0.0/001/ND.DISHUT/I/', $formData['nomor_nota']);
+        $this->assertStringContainsString('Bapak Budi (Kabid)', $formData['penandatangan']);
+        $this->assertNotSame('NOMOR PALSU', $formData['nomor_nota']);
+        $this->assertNotSame('Penandatangan palsu', $formData['penandatangan']);
     }
 
     public function test_surat_cuti_uses_account_profile_quota_and_attachment_upload(): void

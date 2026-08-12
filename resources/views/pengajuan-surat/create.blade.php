@@ -109,6 +109,8 @@ $oldFields = old('fields', []);
             'user.name': pegawaiProfile.name,
             'user.nip': pegawaiProfile.nip,
             'user.jabatan': pegawaiProfile.jabatan,
+            'nota.kepada': 'Kepala Dinas Kehutanan Provinsi Sumatera Selatan',
+            'nota.kabid': pegawaiProfile.kabid_penandatangan || '',
         };
 
         function escapeHtml(value) {

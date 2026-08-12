@@ -73,6 +73,7 @@ class PengajuanSuratController extends Controller
             'name' => Auth::user()->name,
             'nip' => Auth::user()->nip ?: '-',
             'jabatan' => Auth::user()->jabatan ?: '-',
+            'kabid_penandatangan' => $this->kabidPenandatangan(),
         ];
         $cutiUsage = [
             'year' => (int) now()->format('Y'),
@@ -99,6 +100,7 @@ class PengajuanSuratController extends Controller
         $fieldData = $request->validate($this->templateService->validationRules($jenisSurat->slug));
         $cleanFields = $this->templateService->cleanFields($jenisSurat->slug, $fieldData['fields'] ?? []);
         $cleanFields = $this->hydrateSystemFields($jenisSurat->slug, $cleanFields);
+        $cleanFields = $this->hydrateNotaDinasFields($jenisSurat->slug, $cleanFields);
         $cleanFields = $this->attachUploadedFiles($request, $jenisSurat->slug, $cleanFields);
         $quotaSummary = $this->validateCutiQuota($jenisSurat->slug, $cleanFields);
         $posisiAwal = $this->resolvePosisiAwal();
@@ -272,6 +274,30 @@ class PengajuanSuratController extends Controller
         return $fields;
     }
 
+    private function hydrateNotaDinasFields(string $slug, array $fields): array
+    {
+        if ($slug !== 'nota-dinas') {
+            return $fields;
+        }
+
+        $fields['kepada'] = 'Kepala Dinas Kehutanan Provinsi Sumatera Selatan';
+        $fields['nomor_nota'] = $this->generateNomorNotaDinas();
+        $fields['penandatangan'] = $this->kabidPenandatangan();
+
+        return $fields;
+    }
+
+    private function kabidPenandatangan(): string
+    {
+        $kabid = User::where('role', 'kabid')->first();
+
+        if (! $kabid) {
+            return 'Kabid belum diatur';
+        }
+
+        return trim($kabid->name.' - '.($kabid->jabatan ?: 'Kepala Bidang'));
+    }
+
     private function attachUploadedFiles(Request $request, string $slug, array $fields): array
     {
         foreach ($this->templateService->fields($slug) as $key => $field) {
@@ -408,5 +434,15 @@ class PengajuanSuratController extends Controller
         $countToday = PengajuanSurat::whereDate('created_at', now()->toDateString())->count() + 1;
 
         return $prefix.'-'.str_pad((string) $countToday, 4, '0', STR_PAD_LEFT);
+    }
+
+    private function generateNomorNotaDinas(): string
+    {
+        $year = now()->format('Y');
+        $countThisYear = PengajuanSurat::whereHas('jenisSurat', fn ($query) => $query->where('slug', 'nota-dinas'))
+            ->whereYear('created_at', $year)
+            ->count() + 1;
+
+        return '500.0.0.0/'.str_pad((string) $countThisYear, 3, '0', STR_PAD_LEFT).'/ND.DISHUT/I/'.$year;
     }
 }
