@@ -40,6 +40,7 @@ class SuratTemplateService
                 'title' => 'Surat Tugas',
                 'summary' => 'Mengikuti template Surat Perintah Tugas yang disediakan.',
                 'template_label' => 'SPT Bappeda 27 sd 31 Juli 2026.doc',
+                'template_docx' => 'SPT Bappeda 27 sd 31 Juli 2026.docx',
                 'template_note' => 'Template resmi SPT: dasar surat, daftar pegawai yang bepergian, kegiatan, tujuan perjalanan, lama perjalanan, dan penandatangan.',
                 'fields' => [
                     'nomor_surat' => ['label' => 'Nomor surat', 'type' => 'text', 'required' => true, 'readonly' => true, 'source' => 'surat_tugas.nomor_surat', 'placeholder' => 'Terisi otomatis oleh sistem'],
@@ -198,11 +199,19 @@ class SuratTemplateService
 
     public function pdfBinary(PengajuanSurat $pengajuanSurat): string
     {
+        if ($pengajuanSurat->jenisSurat->slug === 'surat-tugas') {
+            return $this->docxToPdfBinary($this->docxBinary($pengajuanSurat)) ?? $this->makeSimplePdf($pengajuanSurat);
+        }
+
         return $this->makeSimplePdf($pengajuanSurat);
     }
 
     public function docxBinary(PengajuanSurat $pengajuanSurat): string
     {
+        if ($pengajuanSurat->jenisSurat->slug === 'surat-tugas') {
+            return $this->makeSuratTugasDocx($pengajuanSurat);
+        }
+
         return $this->makeSimpleDocx($this->plainText($pengajuanSurat));
     }
 
@@ -272,6 +281,130 @@ class SuratTemplateService
         return Str::slug($pengajuanSurat->nomor_pengajuan.'-'.$pengajuanSurat->jenisSurat->nama).'.'.$extension;
     }
 
+    private function docxToPdfBinary(string $docx): ?string
+    {
+        $binary = $this->officeBinary();
+
+        if (! $binary) {
+            return null;
+        }
+
+        $directory = sys_get_temp_dir().DIRECTORY_SEPARATOR.'surat-pdf-'.Str::random(10);
+
+        if (! mkdir($directory, 0775, true) && ! is_dir($directory)) {
+            return null;
+        }
+
+        $docxPath = $directory.DIRECTORY_SEPARATOR.'dokumen.docx';
+        $pdfPath = $directory.DIRECTORY_SEPARATOR.'dokumen.pdf';
+        file_put_contents($docxPath, $docx);
+
+        $command = [
+            $binary,
+            '--headless',
+            '--convert-to',
+            'pdf',
+            '--outdir',
+            $directory,
+            $docxPath,
+        ];
+        $process = proc_open($command, [
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ], $pipes);
+
+        if (! is_resource($process)) {
+            $this->removeDirectory($directory);
+
+            return null;
+        }
+
+        stream_get_contents($pipes[1]);
+        stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        $exitCode = proc_close($process);
+
+        if ($exitCode !== 0 || ! is_file($pdfPath)) {
+            $this->removeDirectory($directory);
+
+            return null;
+        }
+
+        $pdf = file_get_contents($pdfPath) ?: null;
+        $this->removeDirectory($directory);
+
+        return $pdf;
+    }
+
+    private function officeBinary(): ?string
+    {
+        foreach (['soffice', 'libreoffice'] as $binary) {
+            if (! $this->commandExists($binary)) {
+                continue;
+            }
+
+            $process = proc_open([$binary, '--version'], [
+                1 => ['pipe', 'w'],
+                2 => ['pipe', 'w'],
+            ], $pipes);
+
+            if (! is_resource($process)) {
+                continue;
+            }
+
+            stream_get_contents($pipes[1]);
+            stream_get_contents($pipes[2]);
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+
+            if (proc_close($process) === 0) {
+                return $binary;
+            }
+        }
+
+        return null;
+    }
+
+    private function commandExists(string $binary): bool
+    {
+        $checker = PHP_OS_FAMILY === 'Windows' ? 'where' : 'which';
+        $arguments = [$checker, $binary];
+        $process = proc_open($arguments, [
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ], $pipes);
+
+        if (! is_resource($process)) {
+            return false;
+        }
+
+        stream_get_contents($pipes[1]);
+        stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+
+        return proc_close($process) === 0;
+    }
+
+    private function removeDirectory(string $directory): void
+    {
+        if (! is_dir($directory)) {
+            return;
+        }
+
+        foreach (scandir($directory) ?: [] as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+
+            $path = $directory.DIRECTORY_SEPARATOR.$item;
+            is_dir($path) ? $this->removeDirectory($path) : @unlink($path);
+        }
+
+        @rmdir($directory);
+    }
+
     private function makeSimplePdf(PengajuanSurat $pengajuanSurat): string
     {
         $pengajuanSurat->loadMissing(['digitalSignature.signer']);
@@ -315,6 +448,187 @@ class SuratTemplateService
         }
 
         return $pdf."trailer\n<< /Size ".(count($objects) + 1)." /Root 1 0 R >>\nstartxref\n".$xref."\n%%EOF";
+    }
+
+    private function makeSuratTugasDocx(PengajuanSurat $pengajuanSurat): string
+    {
+        $templatePath = base_path('template/'.$this->definition('surat-tugas')['template_docx']);
+
+        if (! is_file($templatePath)) {
+            return $this->makeSimpleDocx($this->plainText($pengajuanSurat));
+        }
+
+        $pengajuanSurat->loadMissing(['digitalSignature.signer']);
+        $data = $pengajuanSurat->metadata['form_data'] ?? [];
+        $temp = tempnam(sys_get_temp_dir(), 'spt-docx');
+        copy($templatePath, $temp);
+
+        $zip = new ZipArchive;
+        $zip->open($temp);
+        $xml = $zip->getFromName('word/document.xml');
+
+        if (! is_string($xml)) {
+            $zip->close();
+
+            return $this->makeSimpleDocx($this->plainText($pengajuanSurat));
+        }
+
+        $xml = $this->replaceWordText($xml, '800.1.11.1/         /ST/Dishut.III/2026', $data['nomor_surat'] ?? '-');
+        $xml = $this->replaceWordText($xml, 'Tanggal : Juli 2026', 'Tanggal'."\t\t".': '.$this->formatIndonesianLongDate($pengajuanSurat->tanggal_pengajuan->toDateString()));
+        $xml = $this->replaceWordText($xml, 'Peraturan Gubernur Sumatera Selatan Nomor: 48 Tahun 2016 tentang Susunan Organisasi, Uraian Tugas dan Fungsi Dinas Kehutanan Provinsi Sumatera Selatan.', $data['dasar_pertama'] ?? '-');
+        $xml = $this->replaceWordText($xml, 'Surat Kepala Badan Perencanaan Pembangunan Daerah Nomor : 000.1.5/1517/Bappeda-IV/2026 Tanggal 21 Juli 2026 tentang Peningkatan Kapasitas dalam Rangka Pembangunan Rendah Karbon Daerah di Provinsi Sumatera Selatan.', $data['dasar_kedua'] ?? '-');
+        $xml = $this->fillSuratTugasPegawai($xml, $data['pegawai_berangkat'] ?? '');
+        $xml = $this->replaceWordText($xml, 'Menghadiri Kegiatan Peningkatan Kapasitas dalam Rangka Pembangunan Rendah Karbon Daerah di Provinsi Sumatera Selatan', $data['kegiatan'] ?? '-');
+        $xml = $this->replaceWordText($xml, 'Aston Pallembang Hotel & Conference Center Jl. Jend. Basuki Rachmat o.189, Talang Aman, Kec. Kemuning, Kota Palembang, Sumatera Selatan 30126', $data['tujuan_perjalanan'] ?? '-');
+        $xml = $this->replaceWordText($xml, '5 (lima) hari / 27-31 Juli 2026', $data['lama_perjalanan'] ?? '-');
+        $xml = $this->replaceWordText($xml, 'Biaya yang timbul dari kegiatan tersebut dibebankan pada Badan Perencanaan Pembangunan Daerah. Membuat Laporan tertulis hasil pelaksanaan tugas tersebut 1 (satu) minggu setelah pelaksanaan tugas kepada Kepala Dinas Kehutanan Provinsi Sumatera Selatan.', trim(($data['keterangan_biaya'] ?? '')."\n".($data['kewajiban_laporan'] ?? '')) ?: '-');
+
+        if ($pengajuanSurat->digitalSignature) {
+            $signatureText = 'Ditandatangani digital: '.$pengajuanSurat->digitalSignature->verification_code;
+            $xml = $this->replaceWordText($xml, 'SUSILO HARTONO, S.Hut., M.Si', $signatureText."\n".$pengajuanSurat->digitalSignature->signer->name);
+        } elseif (! empty($data['penandatangan'])) {
+            $xml = $this->replaceWordText($xml, 'SUSILO HARTONO, S.Hut., M.Si', $data['penandatangan']);
+        }
+
+        $zip->addFromString('word/document.xml', $xml);
+        $zip->close();
+
+        $content = file_get_contents($temp);
+        @unlink($temp);
+
+        return $content ?: '';
+    }
+
+    private function fillSuratTugasPegawai(string $xml, string $rawPegawai): string
+    {
+        $pegawai = $this->parsePegawaiBerangkat($rawPegawai);
+        $defaults = [
+            ['Muhammad Kangau Rizki Akbar, S.Hut', '19990906202521 1 021', 'Penata Muda/IX', 'Penata Layanan Operasional'],
+            ['Vika Kusumaningrum', '19910207202521 2 044', 'Pengatur Muda/V', 'Pengadministrasi Perkantoran'],
+        ];
+
+        foreach ($defaults as $index => [$nama, $nip, $pangkat, $jabatan]) {
+            $item = $pegawai[$index] ?? ['nama' => '-', 'nip' => '-', 'pangkat' => '-', 'jabatan' => '-'];
+            $xml = $this->replaceWordText($xml, $nama, $item['nama']);
+            $xml = $this->replaceWordText($xml, $nip, $item['nip']);
+            $xml = $this->replaceWordText($xml, $pangkat, $item['pangkat']);
+            $xml = $this->replaceWordText($xml, $jabatan, $item['jabatan']);
+        }
+
+        return $xml;
+    }
+
+    private function parsePegawaiBerangkat(string $raw): array
+    {
+        return collect(preg_split('/\R+/', trim($raw)) ?: [])
+            ->filter()
+            ->map(function (string $line): array {
+                $line = trim(preg_replace('/^\d+\.\s*/', '', $line) ?? $line);
+                $parts = array_values(array_filter(array_map('trim', preg_split('/\s+-\s+/', $line) ?: [])));
+
+                return [
+                    'nama' => $parts[0] ?? $line,
+                    'nip' => preg_replace('/^NIP\.?\s*/i', '', $parts[1] ?? '-'),
+                    'pangkat' => $parts[2] ?? '-',
+                    'jabatan' => $parts[3] ?? '-',
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function replaceWordText(string $xml, string $search, string $replacement): string
+    {
+        $dom = new \DOMDocument;
+        $previous = libxml_use_internal_errors(true);
+        $loaded = $dom->loadXML($xml);
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+
+        if (! $loaded) {
+            return $xml;
+        }
+
+        $xpath = new \DOMXPath($dom);
+        $xpath->registerNamespace('w', 'http://schemas.openxmlformats.org/wordprocessingml/2006/main');
+        $searchText = $this->normalizeWordText($search);
+
+        foreach ($xpath->query('//w:p|//w:tc') as $container) {
+            $textNodes = $xpath->query('.//w:t', $container);
+
+            if (! $textNodes || $textNodes->length === 0) {
+                continue;
+            }
+
+            $current = '';
+
+            foreach ($textNodes as $node) {
+                $current .= $node->nodeValue;
+            }
+
+            if (! str_contains($this->normalizeWordText($current), $searchText)) {
+                continue;
+            }
+
+            $updated = str_replace($search, $replacement, $current, $count);
+
+            if ($count === 0) {
+                $pattern = '/'.implode('\s+', array_map(
+                    fn (string $token): string => preg_quote($token, '/'),
+                    preg_split('/\s+/', trim($search)) ?: []
+                )).'/u';
+                $updated = preg_replace($pattern, $replacement, $current, 1, $count) ?? $current;
+            }
+
+            if ($count === 0 && $this->normalizeWordText($current) === $searchText) {
+                $updated = $replacement;
+                $count = 1;
+            }
+
+            if ($count === 0) {
+                continue;
+            }
+
+            $textNodes->item(0)->nodeValue = $updated;
+
+            for ($i = 1; $i < $textNodes->length; $i++) {
+                $textNodes->item($i)->nodeValue = '';
+            }
+
+            return $dom->saveXML() ?: $xml;
+        }
+
+        return $xml;
+    }
+
+    private function normalizeWordText(string $value): string
+    {
+        return trim((string) preg_replace('/\s+/u', ' ', $value));
+    }
+
+    private function formatIndonesianLongDate(?string $date): string
+    {
+        if (! $date) {
+            return '-';
+        }
+
+        $months = [
+            1 => 'Januari',
+            2 => 'Februari',
+            3 => 'Maret',
+            4 => 'April',
+            5 => 'Mei',
+            6 => 'Juni',
+            7 => 'Juli',
+            8 => 'Agustus',
+            9 => 'September',
+            10 => 'Oktober',
+            11 => 'November',
+            12 => 'Desember',
+        ];
+        $timestamp = strtotime($date);
+
+        return date('j', $timestamp).' '.$months[(int) date('n', $timestamp)].' '.date('Y', $timestamp);
     }
 
     private function pdfSignatureBlock(PengajuanSurat $pengajuanSurat, int $topY): string

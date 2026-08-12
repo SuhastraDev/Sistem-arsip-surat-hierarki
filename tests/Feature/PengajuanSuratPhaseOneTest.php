@@ -311,6 +311,53 @@ class PengajuanSuratPhaseOneTest extends TestCase
             ->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     }
 
+    public function test_surat_tugas_docx_export_uses_official_template_layout(): void
+    {
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $jenisSurat = JenisSurat::where('slug', 'surat-tugas')->firstOrFail();
+
+        $this->actingAs($staff)
+            ->post(route('pengajuan-surat.store'), [
+                'jenis_surat_id' => $jenisSurat->id,
+                'tanggal_pengajuan' => '2026-07-24',
+                'perihal' => 'Surat tugas berbasis template resmi',
+                'fields' => [
+                    'dasar_pertama' => 'Dasar pertama custom.',
+                    'dasar_kedua' => 'Dasar kedua custom.',
+                    'pegawai_berangkat' => "1. Rina Putri - NIP 198801012010012001 - Penata/III.c - Analis Kehutanan\n2. Budi Santoso - NIP 198902022011011002 - Penata Muda/III.a - Pengelola Data",
+                    'kegiatan' => 'Menghadiri rapat koordinasi pemulihan kawasan.',
+                    'tujuan_perjalanan' => 'Kantor Dinas Kehutanan Provinsi Sumatera Selatan',
+                    'tanggal_mulai_perjalanan' => '2026-07-27',
+                    'tanggal_selesai_perjalanan' => '2026-07-31',
+                    'keterangan_biaya' => 'Biaya dibebankan pada kegiatan terkait.',
+                    'kewajiban_laporan' => 'Membuat laporan setelah kegiatan.',
+                    'penandatangan' => 'Kabid',
+                ],
+            ]);
+
+        $pengajuan = PengajuanSurat::firstOrFail();
+        $response = $this->get(route('pengajuan-surat.export', [$pengajuan, 'docx']));
+        $temp = tempnam(sys_get_temp_dir(), 'spt-test');
+        file_put_contents($temp, $response->getContent());
+
+        $zip = new \ZipArchive;
+        $zip->open($temp);
+        $documentXml = $zip->getFromName('word/document.xml');
+        $zip->close();
+        @unlink($temp);
+
+        $this->assertStringContainsString('PEMERINTAH PROVINSI SUMATERA SELATAN', $documentXml);
+        $this->assertStringContainsString('SURAT ', $documentXml);
+        $this->assertStringContainsString('TUGAS', $documentXml);
+        $this->assertStringContainsString('Dasar pertama custom.', $documentXml);
+        $this->assertStringContainsString('Rina Putri', $documentXml);
+        $this->assertStringContainsString('Menghadiri rapat koordinasi pemulihan kawasan.', $documentXml);
+        $this->assertStringContainsString('5 hari / 27/07/2026 s.d. 31/07/2026', $documentXml);
+        $this->assertStringNotContainsString('Sistem E-Arsip Surat Digital', $documentXml);
+    }
+
     public function test_nota_dinas_system_fields_ignore_manual_request_values(): void
     {
         Storage::fake('local');
