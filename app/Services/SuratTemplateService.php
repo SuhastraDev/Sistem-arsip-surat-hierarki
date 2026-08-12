@@ -195,6 +195,10 @@ class SuratTemplateService
             ?? $this->docxToPdfBinary($this->docxBinary($pengajuanSurat));
 
         if (! $pdf) {
+            if (app()->environment('production') && $this->usesOfficialTemplate($pengajuanSurat)) {
+                abort(503, 'Preview PDF template belum bisa dibuat. Pastikan LibreOffice/soffice aktif di server.');
+            }
+
             return null;
         }
 
@@ -216,11 +220,26 @@ class SuratTemplateService
 
     public function pdfBinary(PengajuanSurat $pengajuanSurat): string
     {
-        if (in_array($pengajuanSurat->jenisSurat->slug, ['surat-cuti', 'surat-tugas', 'nota-dinas', 'surat-undangan'], true)) {
-            return $this->docxToPdfBinary($this->docxBinary($pengajuanSurat)) ?? $this->makeSimplePdf($pengajuanSurat);
+        if ($this->usesOfficialTemplate($pengajuanSurat)) {
+            $pdf = $this->docxToPdfBinary($this->docxBinary($pengajuanSurat));
+
+            if (! $pdf) {
+                if (app()->environment('production')) {
+                    abort(503, 'PDF template belum bisa dibuat. Pastikan LibreOffice/soffice aktif di server.');
+                }
+
+                return $this->makeSimplePdf($pengajuanSurat);
+            }
+
+            return $pdf;
         }
 
         return $this->makeSimplePdf($pengajuanSurat);
+    }
+
+    private function usesOfficialTemplate(PengajuanSurat $pengajuanSurat): bool
+    {
+        return in_array($pengajuanSurat->jenisSurat->slug, ['surat-cuti', 'surat-tugas', 'nota-dinas', 'surat-undangan'], true);
     }
 
     public function docxBinary(PengajuanSurat $pengajuanSurat): string
@@ -316,11 +335,17 @@ class SuratTemplateService
 
         $docxPath = $directory.DIRECTORY_SEPARATOR.'dokumen.docx';
         $pdfPath = $directory.DIRECTORY_SEPARATOR.'dokumen.pdf';
+        $profilePath = $directory.DIRECTORY_SEPARATOR.'libreoffice-profile';
         file_put_contents($docxPath, $docx);
 
         $command = [
             $binary,
             '--headless',
+            '--nologo',
+            '--nofirststartwizard',
+            '--nodefault',
+            '--nolockcheck',
+            '-env:UserInstallation='.str_replace(DIRECTORY_SEPARATOR, '/', 'file:///'.$profilePath),
             '--convert-to',
             'pdf',
             '--outdir',
