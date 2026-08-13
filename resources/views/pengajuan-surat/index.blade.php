@@ -127,9 +127,20 @@
                         @endif
                     </td>
                     <td class="text-center">
-                        <a href="{{ route('pengajuan-surat.show', $pengajuan) }}" class="btn btn-sm btn-outline-primary">
-                            <i class="fas fa-eye me-1"></i>Lihat
-                        </a>
+                        <div class="d-inline-flex flex-wrap justify-content-center gap-1">
+                            <a href="{{ route('pengajuan-surat.show', $pengajuan) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye me-1"></i>Lihat
+                            </a>
+                            @if(Auth::user()->role === 'staff' && $pengajuan->pemohon_id === Auth::id() && in_array($pengajuan->status, ['draft', 'diajukan'], true))
+                            <form action="{{ route('pengajuan-surat.destroy', $pengajuan) }}" method="POST" onsubmit="return confirm('Hapus pengajuan ini? Riwayat dan lampiran pengajuan akan ikut dihapus.');">
+                                @csrf
+                                @method('DELETE')
+                                <button class="btn btn-sm btn-outline-danger">
+                                    <i class="fas fa-trash me-1"></i>Hapus
+                                </button>
+                            </form>
+                            @endif
+                        </div>
                     </td>
                 </tr>
                 @empty

@@ -167,6 +167,18 @@ class PengajuanSuratController extends Controller
         return view('pengajuan-surat.show', compact('pengajuanSurat', 'templateRows', 'templateDefinition'));
     }
 
+    public function destroy(PengajuanSurat $pengajuanSurat)
+    {
+        abort_unless($this->canDeleteOwnDraftOrSubmittedPengajuan($pengajuanSurat), 403, 'Pengajuan ini sudah masuk pemeriksaan dan tidak bisa dihapus.');
+
+        $this->deleteUploadedAttachments($pengajuanSurat);
+        $pengajuanSurat->delete();
+
+        return redirect()
+            ->route('pengajuan-surat.index')
+            ->with('success', 'Pengajuan surat berhasil dihapus.');
+    }
+
     public function sign(PengajuanSurat $pengajuanSurat)
     {
         $pengajuanSurat->load(['jenisSurat', 'pemohon', 'digitalSignature']);
@@ -418,7 +430,7 @@ class PengajuanSuratController extends Controller
 
         return PengajuanSurat::where('pemohon_id', $userId)
             ->where('jenis_surat_id', $jenisCutiId)
-            ->whereNotIn('status', ['ditolak'])
+            ->whereIn('status', $this->acceptedLeaveStatuses())
             ->get()
             ->sum(function (PengajuanSurat $pengajuan) use ($year): int {
                 $data = $pengajuan->metadata['form_data'] ?? [];
@@ -445,7 +457,7 @@ class PengajuanSuratController extends Controller
 
         return PengajuanSurat::where('pemohon_id', $userId)
             ->where('jenis_surat_id', $jenisCutiId)
-            ->whereNotIn('status', ['ditolak'])
+            ->whereIn('status', $this->acceptedLeaveStatuses())
             ->get()
             ->reduce(function (array $usage, PengajuanSurat $pengajuan): array {
                 $data = $pengajuan->metadata['form_data'] ?? [];
@@ -459,6 +471,29 @@ class PengajuanSuratController extends Controller
 
                 return $usage;
             }, []);
+    }
+
+    private function acceptedLeaveStatuses(): array
+    {
+        return ['disetujui_kabid', 'selesai'];
+    }
+
+    private function canDeleteOwnDraftOrSubmittedPengajuan(PengajuanSurat $pengajuanSurat): bool
+    {
+        return Auth::user()->role === 'staff'
+            && $pengajuanSurat->pemohon_id === Auth::id()
+            && in_array($pengajuanSurat->status, ['draft', 'diajukan'], true);
+    }
+
+    private function deleteUploadedAttachments(PengajuanSurat $pengajuanSurat): void
+    {
+        foreach (($pengajuanSurat->metadata['form_data'] ?? []) as $value) {
+            if (! is_array($value) || empty($value['path'])) {
+                continue;
+            }
+
+            Storage::disk('local')->delete($value['path']);
+        }
     }
 
     private function calculateLeaveDays(?string $start, ?string $end): int

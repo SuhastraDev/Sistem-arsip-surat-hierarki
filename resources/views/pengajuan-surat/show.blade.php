@@ -139,15 +139,18 @@ $verificationUrl = $verificationCode ? route('verification.show', $verificationC
         $canStartKabid = Auth::id() === $pengajuanSurat->posisi_saat_ini && Auth::user()->role === 'kabid' && $pengajuanSurat->status === 'disetujui_kasi';
         $canReviewKabid = Auth::id() === $pengajuanSurat->posisi_saat_ini && Auth::user()->role === 'kabid' && $pengajuanSurat->status === 'diperiksa_kabid';
         $canResubmit = Auth::id() === $pengajuanSurat->pemohon_id && $pengajuanSurat->status === 'draft';
+        $canDeletePengajuan = Auth::user()->role === 'staff' && Auth::id() === $pengajuanSurat->pemohon_id && in_array($pengajuanSurat->status, ['draft', 'diajukan'], true);
+        $hasProcessAction = $canStartKasi || $canReviewKasi || $canStartKabid || $canReviewKabid || $canResubmit;
         @endphp
 
-        @if($canStartKasi || $canReviewKasi || $canStartKabid || $canReviewKabid || $canResubmit)
+        @if($hasProcessAction || $canDeletePengajuan)
         <div class="detail-panel mb-3">
             <div class="detail-panel-header">
                 <strong><i class="fas fa-gavel me-2 text-primary"></i>Panel Aksi</strong>
                 <div class="small text-muted mt-1">Catatan akan masuk ke riwayat aktivitas pengajuan.</div>
             </div>
             <div class="p-3">
+                @if($hasProcessAction)
                 <form action="{{ route('pengajuan-surat.process', $pengajuanSurat) }}" method="POST">
                     @csrf
                     <div class="mb-3">
@@ -178,6 +181,17 @@ $verificationUrl = $verificationCode ? route('verification.show', $verificationC
                         @endif
                     </div>
                 </form>
+                @endif
+                @if($canDeletePengajuan)
+                <form action="{{ route('pengajuan-surat.destroy', $pengajuanSurat) }}" method="POST" class="{{ $hasProcessAction ? 'mt-3' : '' }}" onsubmit="return confirm('Hapus pengajuan ini? Riwayat dan lampiran pengajuan akan ikut dihapus.');">
+                    @csrf
+                    @method('DELETE')
+                    <button class="btn btn-outline-danger">
+                        <i class="fas fa-trash me-1"></i>Hapus Pengajuan
+                    </button>
+                    <div class="form-text">Hanya tersedia sebelum pengajuan mulai diperiksa atau diterima oleh Kasi/Kabid.</div>
+                </form>
+                @endif
             </div>
         </div>
         @endif

@@ -513,6 +513,130 @@ class PengajuanSuratPhaseOneTest extends TestCase
             ->assertSessionHasErrors('fields.tanggal_selesai');
     }
 
+    public function test_surat_cuti_quota_counts_after_kabid_acceptance(): void
+    {
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $jenisSurat = JenisSurat::where('slug', 'surat-cuti')->firstOrFail();
+
+        PengajuanSurat::create([
+            'jenis_surat_id' => $jenisSurat->id,
+            'pemohon_id' => $staff->id,
+            'nomor_pengajuan' => 'PGJ-20260101-0002',
+            'tanggal_pengajuan' => '2026-01-01',
+            'perihal' => 'Cuti tahunan sudah diterima Kabid',
+            'status' => 'disetujui_kabid',
+            'posisi_saat_ini' => $staff->id,
+            'metadata' => [
+                'form_data' => [
+                    'jenis_cuti' => 'Cuti tahunan',
+                    'tanggal_mulai' => '2026-01-06',
+                    'tanggal_selesai' => '2026-01-15',
+                    'lama_cuti' => '10 hari',
+                ],
+            ],
+        ]);
+
+        $this->actingAs($staff)
+            ->from(route('pengajuan-surat.create'))
+            ->post(route('pengajuan-surat.store'), [
+                'jenis_surat_id' => $jenisSurat->id,
+                'tanggal_pengajuan' => '2026-08-12',
+                'perihal' => 'Pengajuan cuti setelah Kabid menerima',
+                'fields' => [
+                    'jenis_cuti' => 'Cuti tahunan',
+                    'tanggal_mulai' => '2026-08-17',
+                    'tanggal_selesai' => '2026-08-19',
+                    'unit_kerja' => 'Dinas Kehutanan Provinsi Sumatera Selatan',
+                    'alasan' => 'Keperluan keluarga',
+                    'alamat_selama_cuti' => 'Palembang',
+                    'telepon' => '081234567890',
+                ],
+            ])
+            ->assertRedirect(route('pengajuan-surat.create'))
+            ->assertSessionHasErrors('fields.tanggal_selesai');
+    }
+
+    public function test_staff_can_delete_pengajuan_before_kasi_or_kabid_receives_it(): void
+    {
+        Storage::fake('local');
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $jenisSurat = JenisSurat::where('slug', 'surat-cuti')->firstOrFail();
+
+        $this->actingAs($staff)
+            ->post(route('pengajuan-surat.store'), [
+                'jenis_surat_id' => $jenisSurat->id,
+                'tanggal_pengajuan' => '2026-08-12',
+                'perihal' => 'Pengajuan yang akan dihapus',
+                'fields' => [
+                    'jenis_cuti' => 'Cuti tahunan',
+                    'tanggal_mulai' => '2026-08-17',
+                    'tanggal_selesai' => '2026-08-18',
+                    'unit_kerja' => 'Dinas Kehutanan Provinsi Sumatera Selatan',
+                    'alasan' => 'Keperluan keluarga',
+                    'alamat_selama_cuti' => 'Palembang',
+                    'telepon' => '081234567890',
+                    'lampiran' => UploadedFile::fake()->create('hapus-lampiran.pdf', 90, 'application/pdf'),
+                ],
+            ]);
+
+        $pengajuan = PengajuanSurat::firstOrFail();
+        $path = $pengajuan->metadata['form_data']['lampiran']['path'];
+        Storage::disk('local')->assertExists($path);
+
+        $this->actingAs($staff)
+            ->delete(route('pengajuan-surat.destroy', $pengajuan))
+            ->assertRedirect(route('pengajuan-surat.index'))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseMissing('pengajuan_surats', [
+            'id' => $pengajuan->id,
+        ]);
+        $this->assertDatabaseMissing('riwayat_pengajuan_surats', [
+            'pengajuan_surat_id' => $pengajuan->id,
+        ]);
+        Storage::disk('local')->assertMissing($path);
+    }
+
+    public function test_staff_cannot_delete_pengajuan_after_kasi_starts_review(): void
+    {
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $kasi = User::where('role', 'kasi')->firstOrFail();
+        $jenisSurat = JenisSurat::where('slug', 'surat-cuti')->firstOrFail();
+
+        $pengajuan = PengajuanSurat::create([
+            'jenis_surat_id' => $jenisSurat->id,
+            'pemohon_id' => $staff->id,
+            'nomor_pengajuan' => 'PGJ-20260812-0008',
+            'tanggal_pengajuan' => '2026-08-12',
+            'perihal' => 'Pengajuan sudah diperiksa Kasi',
+            'status' => 'diperiksa_kasi',
+            'posisi_saat_ini' => $kasi->id,
+            'metadata' => [
+                'form_data' => [
+                    'jenis_cuti' => 'Cuti tahunan',
+                    'tanggal_mulai' => '2026-08-17',
+                    'tanggal_selesai' => '2026-08-18',
+                    'lama_cuti' => '2 hari',
+                ],
+            ],
+        ]);
+
+        $this->actingAs($staff)
+            ->delete(route('pengajuan-surat.destroy', $pengajuan))
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('pengajuan_surats', [
+            'id' => $pengajuan->id,
+            'status' => 'diperiksa_kasi',
+        ]);
+    }
+
     public function test_surat_cuti_rejects_single_request_longer_than_annual_quota(): void
     {
         $this->seed();

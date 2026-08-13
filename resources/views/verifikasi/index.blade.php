@@ -191,7 +191,6 @@
     <main class="verify-shell">
         <div class="verify-header">
             <div>
-                <div class="text-uppercase fw-bold text-success small mb-2">E-Surat Suhastra</div>
                 <h1 class="verify-title">Verifikasi Dokumen</h1>
                 <p class="verify-subtitle">Masukkan kode verifikasi dari dokumen bertanda tangan digital. Upload PDF/DOCX bersifat opsional untuk memastikan file yang dipegang sama dengan arsip final.</p>
             </div>
