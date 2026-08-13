@@ -225,6 +225,37 @@ class PengajuanSuratPhaseOneTest extends TestCase
         }
     }
 
+    public function test_admin_can_view_user_detail(): void
+    {
+        $this->seed();
+
+        $admin = User::where('role', 'admin')->firstOrFail();
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $kasi = User::findOrFail($staff->parent_id);
+
+        $this->actingAs($admin)
+            ->get(route('users.show', $staff))
+            ->assertOk()
+            ->assertSee('Detail Akun Pegawai')
+            ->assertSee($staff->name)
+            ->assertSee($staff->email)
+            ->assertSee($staff->nip)
+            ->assertSee($kasi->name)
+            ->assertSee('Pengajuan Dibuat');
+    }
+
+    public function test_non_admin_cannot_view_user_detail(): void
+    {
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $kasi = User::where('role', 'kasi')->firstOrFail();
+
+        $this->actingAs($staff)
+            ->get(route('users.show', $kasi))
+            ->assertForbidden();
+    }
+
     public function test_kabid_uses_pengajuan_workspace_instead_of_legacy_surat_modules(): void
     {
         $this->seed();

@@ -48,7 +48,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
 
-    Route::resource('users', UserController::class)->only(['index', 'create', 'store', 'destroy']);
+    Route::resource('users', UserController::class)->only(['index', 'create', 'store', 'show', 'destroy']);
 
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });

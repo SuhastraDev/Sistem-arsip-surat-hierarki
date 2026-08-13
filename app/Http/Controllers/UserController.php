@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PengajuanSurat;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -65,7 +66,31 @@ class UserController extends Controller
         return redirect()->route('users.index')->with('success', 'User berhasil ditambahkan!');
     }
 
-    // 4. HAPUS USER
+    // 4. DETAIL USER
+    public function show(User $user)
+    {
+        $this->ensureAdmin();
+        abort_if($user->role === 'admin', 403, 'Detail Admin tidak ditampilkan dari halaman ini.');
+
+        $user->load(['atasan', 'bawahan']);
+        $stats = [
+            'pengajuan_dibuat' => PengajuanSurat::where('pemohon_id', $user->id)->count(),
+            'pengajuan_di_meja' => PengajuanSurat::where('posisi_saat_ini', $user->id)
+                ->whereNotIn('status', ['selesai', 'ditolak'])
+                ->count(),
+            'bawahan' => $user->bawahan->count(),
+        ];
+
+        $recentPengajuan = PengajuanSurat::with(['jenisSurat', 'posisi'])
+            ->where('pemohon_id', $user->id)
+            ->latest()
+            ->limit(5)
+            ->get();
+
+        return view('users.show', compact('user', 'stats', 'recentPengajuan'));
+    }
+
+    // 5. HAPUS USER
     public function destroy($id)
     {
         $this->ensureAdmin();

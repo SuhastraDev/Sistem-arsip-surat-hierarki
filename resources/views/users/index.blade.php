@@ -93,14 +93,19 @@
                         @endif
                     </td>
                     <td class="text-center">
-                        <form action="{{ route('users.destroy', $user->id) }}" method="POST"
-                            onsubmit="return confirm('Yakin ingin menghapus akun pegawai ini? Data surat terkait mungkin akan kehilangan referensi.');">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-sm btn-danger" title="Hapus User">
-                                <i class="fas fa-trash-alt"></i> Hapus
-                            </button>
-                        </form>
+                        <div class="d-inline-flex flex-wrap justify-content-center gap-1">
+                            <a href="{{ route('users.show', $user) }}" class="btn btn-sm btn-outline-primary" title="Lihat Detail Akun">
+                                <i class="fas fa-eye"></i> Detail
+                            </a>
+                            <form action="{{ route('users.destroy', $user->id) }}" method="POST"
+                                onsubmit="return confirm('Yakin ingin menghapus akun pegawai ini? Data surat terkait mungkin akan kehilangan referensi.');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-sm btn-danger" title="Hapus User">
+                                    <i class="fas fa-trash-alt"></i> Hapus
+                                </button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
                 @empty
