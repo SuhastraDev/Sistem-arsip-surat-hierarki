@@ -26,11 +26,6 @@ class AuthController extends Controller
 
         $user = User::where('nip', $data['nip'])->first();
 
-        // Fallback hanya untuk akun lama yang belum punya NIP, agar tidak terkunci.
-        if (! $user && str_contains($data['nip'], '@')) {
-            $user = User::whereNull('nip')->where('email', $data['nip'])->first();
-        }
-
         if ($user && Hash::check($data['password'], $user->password)) {
             Auth::login($user);
             $request->session()->regenerate();

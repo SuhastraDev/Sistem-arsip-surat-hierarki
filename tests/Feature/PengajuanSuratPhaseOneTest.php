@@ -122,6 +122,22 @@ class PengajuanSuratPhaseOneTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_email_login_is_not_used_for_existing_account_without_nip(): void
+    {
+        $this->seed();
+
+        $admin = User::where('role', 'admin')->firstOrFail();
+        $admin->update(['nip' => null]);
+
+        $this->post(route('login'), [
+            'nip' => $admin->email,
+            'password' => 'password',
+        ])
+            ->assertSessionHasErrors('nip');
+
+        $this->assertGuest();
+    }
+
     public function test_surat_tugas_system_fields_ignore_manual_values_and_calculate_travel_dates(): void
     {
         $this->seed();
