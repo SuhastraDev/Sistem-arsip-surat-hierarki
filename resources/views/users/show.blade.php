@@ -42,12 +42,8 @@
                         <strong>{{ $user->name }}</strong>
                     </div>
                     <div>
-                        <span>NIP</span>
+                        <span>NIP Login</span>
                         <strong>{{ $user->nip ?: '-' }}</strong>
-                    </div>
-                    <div>
-                        <span>Email Login</span>
-                        <strong>{{ $user->email }}</strong>
                     </div>
                     <div>
                         <span>Jabatan</span>

@@ -93,6 +93,35 @@ class PengajuanSuratPhaseOneTest extends TestCase
             ->assertRedirect(route('login'));
     }
 
+    public function test_user_can_login_with_nip(): void
+    {
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+
+        $this->post(route('login'), [
+            'nip' => $staff->nip,
+            'password' => 'password',
+        ])->assertRedirect('dashboard');
+
+        $this->assertAuthenticatedAs($staff);
+    }
+
+    public function test_email_login_is_not_used_for_account_with_nip(): void
+    {
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+
+        $this->post(route('login'), [
+            'nip' => $staff->email,
+            'password' => 'password',
+        ])
+            ->assertSessionHasErrors('nip');
+
+        $this->assertGuest();
+    }
+
     public function test_surat_tugas_system_fields_ignore_manual_values_and_calculate_travel_dates(): void
     {
         $this->seed();
@@ -238,10 +267,36 @@ class PengajuanSuratPhaseOneTest extends TestCase
             ->assertOk()
             ->assertSee('Detail Akun Pegawai')
             ->assertSee($staff->name)
-            ->assertSee($staff->email)
             ->assertSee($staff->nip)
             ->assertSee($kasi->name)
             ->assertSee('Pengajuan Dibuat');
+    }
+
+    public function test_admin_can_create_user_with_nip_without_email_input(): void
+    {
+        $this->seed();
+
+        $admin = User::where('role', 'admin')->firstOrFail();
+        $kasi = User::where('role', 'kasi')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->post(route('users.store'), [
+                'name' => 'Staff Baru',
+                'nip' => '199001012020011001',
+                'password' => 'password123',
+                'role' => 'staff',
+                'jabatan' => 'Staf Administrasi Baru',
+                'parent_id' => $kasi->id,
+            ])
+            ->assertRedirect(route('users.index'));
+
+        $this->assertDatabaseHas('users', [
+            'name' => 'Staff Baru',
+            'nip' => '199001012020011001',
+            'email' => '199001012020011001@sistem.local',
+            'role' => 'staff',
+            'parent_id' => $kasi->id,
+        ]);
     }
 
     public function test_non_admin_cannot_view_user_detail(): void

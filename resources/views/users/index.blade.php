@@ -38,7 +38,7 @@
                 <tr>
                     <th width="5%" class="text-center text-white">No</th>
                     <th width="20%" class="text-white">Nama Lengkap</th>
-                    <th width="20%" class="text-white">Email & Login</th>
+                    <th width="20%" class="text-white">NIP Login</th>
                     <th width="18%" class="text-white">Jabatan / Posisi</th>
                     <th width="10%" class="text-center text-white">Role</th>
                     <th width="17%" class="text-white">Atasan Langsung</th>
@@ -59,8 +59,8 @@
                     </td>
                     <td>
                         <div class="d-flex align-items-center text-muted small">
-                            <i class="fas fa-envelope me-2"></i>
-                            {{ $user->email }}
+                            <i class="fas fa-id-card me-2"></i>
+                            {{ $user->nip ?: 'Belum ada NIP' }}
                         </div>
                     </td>
                     <td>

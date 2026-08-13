@@ -13,7 +13,7 @@ class UserSeeder extends Seeder
         // 1. BUAT ADMIN
         User::create([
             'name' => 'Administrator',
-            'nip' => null,
+            'nip' => '000000000000000000',
             'email' => 'admin@dishut.com',
             'password' => Hash::make('password'), // passwordnya: password
             'role' => 'admin',

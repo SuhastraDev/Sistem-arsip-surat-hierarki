@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
@@ -17,13 +19,20 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         // Validasi input
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
+        $data = $request->validate([
+            'nip' => ['required', 'string'],
             'password' => ['required'],
         ]);
 
-        // Cek ke Database
-        if (Auth::attempt($credentials)) {
+        $user = User::where('nip', $data['nip'])->first();
+
+        // Fallback hanya untuk akun lama yang belum punya NIP, agar tidak terkunci.
+        if (! $user && str_contains($data['nip'], '@')) {
+            $user = User::whereNull('nip')->where('email', $data['nip'])->first();
+        }
+
+        if ($user && Hash::check($data['password'], $user->password)) {
+            Auth::login($user);
             $request->session()->regenerate();
 
             // Redirect sesuai Role (Penting!)
@@ -33,7 +42,7 @@ class AuthController extends Controller
 
         // Jika salah
         return back()->withErrors([
-            'email' => 'Email atau password salah.',
+            'nip' => 'NIP atau password salah.',
         ]);
     }
 
@@ -43,6 +52,7 @@ class AuthController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
         return redirect('/login');
     }
 }

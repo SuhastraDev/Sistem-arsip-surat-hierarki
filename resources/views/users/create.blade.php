@@ -65,12 +65,12 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">
-                                    NIP
+                                    NIP <span class="text-danger">*</span>
                                 </label>
                                 <input type="text" name="nip" class="form-control"
                                     placeholder="Contoh: 198705122010011002"
-                                    value="{{ old('nip') }}">
-                                <small class="text-muted">Dipakai otomatis di form cuti pegawai</small>
+                                    value="{{ old('nip') }}" required>
+                                <small class="text-muted">Dipakai untuk login dan otomatis terisi di form cuti pegawai</small>
                             </div>
                         </div>
 
@@ -87,20 +87,6 @@
                         </div>
 
                         <div class="row g-3 mt-2">
-                            <div class="col-md-6">
-                                <label class="form-label">
-                                    Email (Username) <span class="text-danger">*</span>
-                                </label>
-                                <div class="input-group">
-                                    <span class="input-group-text">
-                                        <i class="fas fa-envelope"></i>
-                                    </span>
-                                    <input type="email" name="email" class="form-control"
-                                        placeholder="contoh@dishut.go.id"
-                                        value="{{ old('email') }}" required>
-                                </div>
-                                <small class="text-muted">Email untuk login ke sistem</small>
-                            </div>
                             <div class="col-md-6">
                                 <label class="form-label">
                                     Password Default <span class="text-danger">*</span>

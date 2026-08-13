@@ -307,7 +307,7 @@
             font-size: 0.85rem;
         }
 
-        .demo-email {
+        .demo-nip {
             color: #64748b;
             font-size: 0.75rem;
             overflow-wrap: anywhere;
@@ -423,18 +423,18 @@
                 <!-- Alert Error (jika ada) -->
                 <div class="alert alert-danger" style="display: none;" id="errorAlert">
                     <i class="fas fa-exclamation-circle me-2"></i>
-                    <span id="errorMessage">Email atau password salah!</span>
+                    <span id="errorMessage">NIP atau password salah!</span>
                 </div>
 
                 <form action="{{ route('login') }}" method="POST">
                     @csrf
 
                     <div class="form-group">
-                        <label class="form-label">Email</label>
+                        <label class="form-label">NIP</label>
                         <div class="input-wrapper">
-                            <i class="fas fa-envelope input-icon"></i>
-                            <input type="email" name="email" id="emailInput" class="form-control"
-                                placeholder="nama@perusahaan.com" required autofocus>
+                            <i class="fas fa-id-card input-icon"></i>
+                            <input type="text" name="nip" id="nipInput" class="form-control"
+                                placeholder="Masukkan NIP" value="{{ old('nip') }}" required autofocus>
                         </div>
                     </div>
 
@@ -463,21 +463,21 @@
                     </div>
 
                     <div class="demo-grid">
-                        <button type="button" class="demo-account" data-email="admin@dishut.com">
+                        <button type="button" class="demo-account" data-nip="000000000000000000">
                             <div class="demo-role"><i class="fas fa-user-shield"></i> Admin</div>
-                            <div class="demo-email">admin@dishut.com</div>
+                            <div class="demo-nip">000000000000000000</div>
                         </button>
-                        <button type="button" class="demo-account" data-email="kabid@dishut.com">
+                        <button type="button" class="demo-account" data-nip="197801012006041001">
                             <div class="demo-role"><i class="fas fa-user-tie"></i> Kabid</div>
-                            <div class="demo-email">kabid@dishut.com</div>
+                            <div class="demo-nip">197801012006041001</div>
                         </button>
-                        <button type="button" class="demo-account" data-email="kasi@dishut.com">
+                        <button type="button" class="demo-account" data-nip="198203152010012002">
                             <div class="demo-role"><i class="fas fa-user-check"></i> Kasi</div>
-                            <div class="demo-email">kasi@dishut.com</div>
+                            <div class="demo-nip">198203152010012002</div>
                         </button>
-                        <button type="button" class="demo-account" data-email="staf@dishut.com">
+                        <button type="button" class="demo-account" data-nip="199909062025211021">
                             <div class="demo-role"><i class="fas fa-user"></i> Staff</div>
-                            <div class="demo-email">staf@dishut.com</div>
+                            <div class="demo-nip">199909062025211021</div>
                         </button>
                     </div>
                 </div>
@@ -500,7 +500,7 @@
     <script>
         document.querySelectorAll('.demo-account').forEach((button) => {
             button.addEventListener('click', () => {
-                document.getElementById('emailInput').value = button.dataset.email;
+                document.getElementById('nipInput').value = button.dataset.nip;
                 document.getElementById('passwordInput').value = 'password';
             });
         });

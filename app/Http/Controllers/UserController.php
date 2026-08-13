@@ -44,8 +44,7 @@ class UserController extends Controller
 
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'nip' => ['nullable', 'string', 'max:50'],
-            'email' => ['required', 'email', 'unique:users,email'],
+            'nip' => ['required', 'string', 'max:50', 'unique:users,nip'],
             'password' => ['required', 'string', 'min:6'],
             'role' => ['required', Rule::in(['admin', 'kabid', 'kasi', 'staff'])],
             'jabatan' => ['required', 'string', 'max:255'],
@@ -56,7 +55,7 @@ class UserController extends Controller
         User::create([
             'name' => $request->name,
             'nip' => $request->nip,
-            'email' => $request->email,
+            'email' => $this->internalEmailFromNip($request->nip),
             'password' => Hash::make($request->password),
             'role' => $request->role,
             'jabatan' => $request->jabatan,
@@ -64,6 +63,13 @@ class UserController extends Controller
         ]);
 
         return redirect()->route('users.index')->with('success', 'User berhasil ditambahkan!');
+    }
+
+    private function internalEmailFromNip(string $nip): string
+    {
+        $loginId = preg_replace('/[^A-Za-z0-9._-]/', '', $nip) ?: uniqid('akun-', false);
+
+        return $loginId.'@sistem.local';
     }
 
     // 4. DETAIL USER
