@@ -86,9 +86,8 @@ class PengajuanSuratController extends Controller
         ];
         $cutiUsage = [
             'year' => (int) now()->format('Y'),
-            'quota' => 12,
-            'used' => $this->usedAnnualLeaveDays(Auth::id(), (int) now()->format('Y')),
-            'by_year' => $this->annualLeaveUsageByYear(Auth::id()),
+            'types' => $this->leaveQuotaDefinitions(),
+            'usage' => $this->leaveUsageByTypeAndYear(Auth::id()),
         ];
 
         return view('pengajuan-surat.create', compact('jenisSurats', 'templateDefinitions', 'pegawaiProfile', 'cutiUsage'));
@@ -458,10 +457,11 @@ class PengajuanSuratController extends Controller
 
     private function validateCutiQuota(string $slug, array $fields): ?array
     {
-        if ($slug !== 'surat-cuti' || ($fields['jenis_cuti'] ?? null) !== 'Cuti tahunan') {
+        if ($slug !== 'surat-cuti') {
             return null;
         }
 
+        $leaveType = $fields['jenis_cuti'] ?? null;
         $start = $fields['tanggal_mulai'] ?? null;
         $end = $fields['tanggal_selesai'] ?? null;
 
@@ -470,9 +470,6 @@ class PengajuanSuratController extends Controller
         }
 
         $requestedDays = $this->calculateLeaveDays($start, $end);
-        $year = (int) date('Y', strtotime($start));
-        $usedDays = $this->usedAnnualLeaveDays(Auth::id(), $year);
-        $remainingDays = 12 - $usedDays;
 
         if ($requestedDays < 1) {
             throw ValidationException::withMessages([
@@ -480,28 +477,50 @@ class PengajuanSuratController extends Controller
             ]);
         }
 
-        if ($requestedDays > 12) {
+        $definition = $leaveType ? $this->leaveQuotaDefinition($leaveType, $start) : null;
+
+        if (! $definition || $definition['quota_days'] === null) {
+            return [
+                'jenis_cuti' => $leaveType,
+                'year' => (int) date('Y', strtotime($start)),
+                'quota_label' => $definition['label'] ?? 'Tidak mengurangi kuota',
+                'quota_days' => null,
+                'used_days_before_request' => 0,
+                'requested_days' => $requestedDays,
+                'remaining_days_after_request' => null,
+                'reduces_quota' => false,
+            ];
+        }
+
+        $year = (int) date('Y', strtotime($start));
+        $usedDays = $this->usedLeaveDays(Auth::id(), $year, $leaveType);
+        $remainingDays = $definition['quota_days'] - $usedDays;
+
+        if ($requestedDays > $definition['quota_days']) {
             throw ValidationException::withMessages([
-                'fields.tanggal_selesai' => "Pengajuan cuti tahunan maksimal 12 hari dalam satu tahun. Pengajuan ini {$requestedDays} hari.",
+                'fields.tanggal_selesai' => "Pengajuan {$leaveType} maksimal {$definition['label']} dalam satu tahun. Pengajuan ini {$requestedDays} hari.",
             ]);
         }
 
         if ($requestedDays > $remainingDays) {
             throw ValidationException::withMessages([
-                'fields.tanggal_selesai' => "Kuota cuti tahunan tidak mencukupi. Sisa kuota tahun {$year}: {$remainingDays} hari, pengajuan ini {$requestedDays} hari.",
+                'fields.tanggal_selesai' => "Kuota {$leaveType} tidak mencukupi. Sisa kuota tahun {$year}: {$remainingDays} hari, pengajuan ini {$requestedDays} hari.",
             ]);
         }
 
         return [
+            'jenis_cuti' => $leaveType,
             'year' => $year,
-            'annual_quota' => 12,
+            'quota_label' => $definition['label'],
+            'quota_days' => $definition['quota_days'],
             'used_days_before_request' => $usedDays,
             'requested_days' => $requestedDays,
             'remaining_days_after_request' => $remainingDays - $requestedDays,
+            'reduces_quota' => true,
         ];
     }
 
-    private function usedAnnualLeaveDays(int $userId, int $year): int
+    private function usedLeaveDays(int $userId, int $year, string $leaveType): int
     {
         $jenisCutiId = JenisSurat::where('slug', 'surat-cuti')->value('id');
 
@@ -513,10 +532,10 @@ class PengajuanSuratController extends Controller
             ->where('jenis_surat_id', $jenisCutiId)
             ->whereIn('status', $this->acceptedLeaveStatuses())
             ->get()
-            ->sum(function (PengajuanSurat $pengajuan) use ($year): int {
+            ->sum(function (PengajuanSurat $pengajuan) use ($year, $leaveType): int {
                 $data = $pengajuan->metadata['form_data'] ?? [];
 
-                if (($data['jenis_cuti'] ?? null) !== 'Cuti tahunan') {
+                if (($data['jenis_cuti'] ?? null) !== $leaveType) {
                     return 0;
                 }
 
@@ -528,7 +547,7 @@ class PengajuanSuratController extends Controller
             });
     }
 
-    private function annualLeaveUsageByYear(int $userId): array
+    private function leaveUsageByTypeAndYear(int $userId): array
     {
         $jenisCutiId = JenisSurat::where('slug', 'surat-cuti')->value('id');
 
@@ -542,16 +561,56 @@ class PengajuanSuratController extends Controller
             ->get()
             ->reduce(function (array $usage, PengajuanSurat $pengajuan): array {
                 $data = $pengajuan->metadata['form_data'] ?? [];
+                $leaveType = $data['jenis_cuti'] ?? null;
 
-                if (($data['jenis_cuti'] ?? null) !== 'Cuti tahunan' || empty($data['tanggal_mulai'])) {
+                if (! $leaveType || empty($data['tanggal_mulai'])) {
+                    return $usage;
+                }
+
+                $definition = $this->leaveQuotaDefinition($leaveType, $data['tanggal_mulai']);
+
+                if (! $definition || $definition['quota_days'] === null) {
                     return $usage;
                 }
 
                 $year = (int) date('Y', strtotime($data['tanggal_mulai']));
-                $usage[$year] = ($usage[$year] ?? 0) + $this->calculateLeaveDays($data['tanggal_mulai'] ?? null, $data['tanggal_selesai'] ?? null);
+                $usage[$leaveType][$year] = ($usage[$leaveType][$year] ?? 0) + $this->calculateLeaveDays($data['tanggal_mulai'] ?? null, $data['tanggal_selesai'] ?? null);
 
                 return $usage;
             }, []);
+    }
+
+    private function leaveQuotaDefinitions(?string $start = null): array
+    {
+        return [
+            'Cuti tahunan' => $this->leaveQuotaDefinition('Cuti tahunan', $start),
+            'Cuti sakit' => $this->leaveQuotaDefinition('Cuti sakit', $start),
+            'Cuti melahirkan' => $this->leaveQuotaDefinition('Cuti melahirkan', $start),
+            'Cuti alasan penting' => $this->leaveQuotaDefinition('Cuti alasan penting', $start),
+        ];
+    }
+
+    private function leaveQuotaDefinition(string $leaveType, ?string $start = null): ?array
+    {
+        return match ($leaveType) {
+            'Cuti tahunan' => ['label' => '12 hari', 'quota_days' => 12, 'unit' => 'hari', 'reduces_quota' => true],
+            'Cuti sakit' => ['label' => 'Tidak dihitung', 'quota_days' => null, 'unit' => 'hari', 'reduces_quota' => false],
+            'Cuti melahirkan' => ['label' => '3 bulan', 'quota_days' => $this->maternityQuotaDays($start), 'unit' => 'bulan', 'reduces_quota' => true],
+            'Cuti alasan penting' => ['label' => '12 hari', 'quota_days' => 12, 'unit' => 'hari', 'reduces_quota' => true],
+            default => null,
+        };
+    }
+
+    private function maternityQuotaDays(?string $start): int
+    {
+        if (! $start) {
+            return 93;
+        }
+
+        $startDate = new \DateTimeImmutable($start);
+        $endDate = $startDate->modify('+3 months')->modify('-1 day');
+
+        return ((int) $startDate->diff($endDate)->days) + 1;
     }
 
     private function acceptedLeaveStatuses(): array

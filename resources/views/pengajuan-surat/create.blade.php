@@ -212,8 +212,8 @@ $oldFields = old('fields', []);
             const quotaPanel = slug === 'surat-cuti' ? `
                 <div class="quota-panel mx-3 mt-3" id="cutiQuotaPanel">
                     <div>
-                        <span>Kuota Cuti Tahunan</span>
-                        <strong><span id="cutiUsed">${cutiUsage.used}</span> / ${cutiUsage.quota} hari terpakai</strong>
+                        <span id="cutiQuotaTitle">Kuota cuti</span>
+                        <strong id="cutiQuotaUsage">Pilih jenis cuti</strong>
                     </div>
                     <div class="quota-result" id="cutiQuotaResult">Pilih tanggal cuti untuk melihat sisa kuota.</div>
                 </div>` : '';
@@ -261,7 +261,8 @@ $oldFields = old('fields', []);
             const jenisInput = panel.querySelector('[name="fields[jenis_cuti]"]');
             const lamaInput = panel.querySelector('[name="fields[lama_cuti]"]');
             const result = document.getElementById('cutiQuotaResult');
-            const usedText = document.getElementById('cutiUsed');
+            const quotaTitle = document.getElementById('cutiQuotaTitle');
+            const quotaUsage = document.getElementById('cutiQuotaUsage');
 
             function daysBetween(start, end) {
                 if (!start || !end) return 0;
@@ -274,10 +275,15 @@ $oldFields = old('fields', []);
             function updateQuota() {
                 const requested = daysBetween(startInput.value, endInput.value);
                 const startYear = startInput.value ? new Date(`${startInput.value}T00:00:00`).getFullYear() : cutiUsage.year;
-                const used = Number((cutiUsage.by_year || {})[startYear] || (startYear === cutiUsage.year ? cutiUsage.used : 0));
-                const remaining = cutiUsage.quota - used;
-                const isAnnualLeave = jenisInput.value === 'Cuti tahunan';
-                usedText.textContent = used;
+                const leaveType = jenisInput.value || 'Cuti tahunan';
+                const quotaDefinition = (cutiUsage.types || {})[leaveType] || {};
+                const quotaDays = quotaDefinition.quota_days;
+                const used = Number((((cutiUsage.usage || {})[leaveType] || {})[startYear]) || 0);
+                const remaining = quotaDays === null || quotaDays === undefined ? null : quotaDays - used;
+                quotaTitle.textContent = `Kuota ${leaveType || 'cuti'}`;
+                quotaUsage.textContent = quotaDays === null || quotaDays === undefined
+                    ? 'Tidak mengurangi kuota'
+                    : `${used} hari terpakai / ${quotaDefinition.label || `${quotaDays} hari`}`;
                 submitButton.disabled = false;
 
                 if (!requested) {
@@ -289,15 +295,15 @@ $oldFields = old('fields', []);
 
                 lamaInput.value = `${requested} hari`;
 
-                if (!isAnnualLeave) {
+                if (quotaDays === null || quotaDays === undefined) {
                     result.className = 'quota-result';
-                    result.textContent = 'Kuota 12 hari hanya berlaku untuk Cuti tahunan.';
+                    result.textContent = `${leaveType} tidak dihitung dan tidak mengurangi kuota.`;
                     return;
                 }
 
-                if (requested > remaining || requested > cutiUsage.quota) {
+                if (requested > remaining || requested > quotaDays) {
                     result.className = 'quota-result danger';
-                    result.textContent = `Melebihi kuota tahun ${startYear}. Sisa ${Math.max(remaining, 0)} hari, pengajuan ini ${requested} hari.`;
+                    result.textContent = `Melebihi kuota ${leaveType} tahun ${startYear}. Sisa ${Math.max(remaining, 0)} hari, pengajuan ini ${requested} hari.`;
                     submitButton.disabled = true;
                     return;
                 }

@@ -858,6 +858,9 @@ class PengajuanSuratPhaseOneTest extends TestCase
         $this->assertSame('Ibu Siti (Kasi) - Kasi Rehabilitasi Hutan', $formData['atasan_langsung']);
         $this->assertArrayNotHasKey('masa_kerja', $formData);
         $this->assertSame('3 hari', $formData['lama_cuti']);
+        $this->assertSame('Cuti tahunan', $pengajuan->metadata['cuti_quota']['jenis_cuti']);
+        $this->assertSame('12 hari', $pengajuan->metadata['cuti_quota']['quota_label']);
+        $this->assertSame(12, $pengajuan->metadata['cuti_quota']['quota_days']);
         $this->assertSame(3, $pengajuan->metadata['cuti_quota']['requested_days']);
         $this->assertSame(9, $pengajuan->metadata['cuti_quota']['remaining_days_after_request']);
         $this->assertSame('surat-pendukung.pdf', $formData['lampiran']['original_name']);
@@ -913,6 +916,130 @@ class PengajuanSuratPhaseOneTest extends TestCase
                     'tanggal_selesai' => '2026-08-19',
                     'unit_kerja' => 'Dinas Kehutanan Provinsi Sumatera Selatan',
                     'alasan' => 'Keperluan keluarga',
+                    'alamat_selama_cuti' => 'Palembang',
+                    'telepon' => '081234567890',
+                ],
+            ])
+            ->assertRedirect(route('pengajuan-surat.create'))
+            ->assertSessionHasErrors('fields.tanggal_selesai');
+    }
+
+    public function test_surat_cuti_sakit_does_not_reduce_quota(): void
+    {
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $jenisSurat = JenisSurat::where('slug', 'surat-cuti')->firstOrFail();
+
+        PengajuanSurat::create([
+            'jenis_surat_id' => $jenisSurat->id,
+            'pemohon_id' => $staff->id,
+            'nomor_pengajuan' => 'PGJ-20260101-0010',
+            'tanggal_pengajuan' => '2026-01-01',
+            'perihal' => 'Cuti sakit sebelumnya',
+            'status' => 'selesai',
+            'posisi_saat_ini' => $staff->id,
+            'metadata' => [
+                'form_data' => [
+                    'jenis_cuti' => 'Cuti sakit',
+                    'tanggal_mulai' => '2026-01-06',
+                    'tanggal_selesai' => '2026-02-20',
+                    'lama_cuti' => '46 hari',
+                ],
+            ],
+        ]);
+
+        $this->actingAs($staff)
+            ->post(route('pengajuan-surat.store'), [
+                'jenis_surat_id' => $jenisSurat->id,
+                'tanggal_pengajuan' => '2026-08-12',
+                'perihal' => 'Pengajuan cuti sakit lanjutan',
+                'fields' => [
+                    'jenis_cuti' => 'Cuti sakit',
+                    'tanggal_mulai' => '2026-08-17',
+                    'tanggal_selesai' => '2026-09-30',
+                    'unit_kerja' => 'Dinas Kehutanan Provinsi Sumatera Selatan',
+                    'alasan' => 'Pemulihan kesehatan',
+                    'alamat_selama_cuti' => 'Palembang',
+                    'telepon' => '081234567890',
+                ],
+            ])
+            ->assertRedirect(route('pengajuan-surat.index'));
+
+        $pengajuan = PengajuanSurat::where('perihal', 'Pengajuan cuti sakit lanjutan')->firstOrFail();
+        $this->assertFalse($pengajuan->metadata['cuti_quota']['reduces_quota']);
+        $this->assertNull($pengajuan->metadata['cuti_quota']['quota_days']);
+        $this->assertNull($pengajuan->metadata['cuti_quota']['remaining_days_after_request']);
+    }
+
+    public function test_surat_cuti_alasan_penting_has_separate_12_day_quota(): void
+    {
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $jenisSurat = JenisSurat::where('slug', 'surat-cuti')->firstOrFail();
+
+        PengajuanSurat::create([
+            'jenis_surat_id' => $jenisSurat->id,
+            'pemohon_id' => $staff->id,
+            'nomor_pengajuan' => 'PGJ-20260101-0011',
+            'tanggal_pengajuan' => '2026-01-01',
+            'perihal' => 'Cuti tahunan penuh',
+            'status' => 'selesai',
+            'posisi_saat_ini' => $staff->id,
+            'metadata' => [
+                'form_data' => [
+                    'jenis_cuti' => 'Cuti tahunan',
+                    'tanggal_mulai' => '2026-01-06',
+                    'tanggal_selesai' => '2026-01-17',
+                    'lama_cuti' => '12 hari',
+                ],
+            ],
+        ]);
+
+        $this->actingAs($staff)
+            ->post(route('pengajuan-surat.store'), [
+                'jenis_surat_id' => $jenisSurat->id,
+                'tanggal_pengajuan' => '2026-08-12',
+                'perihal' => 'Pengajuan alasan penting',
+                'fields' => [
+                    'jenis_cuti' => 'Cuti alasan penting',
+                    'tanggal_mulai' => '2026-08-17',
+                    'tanggal_selesai' => '2026-08-28',
+                    'unit_kerja' => 'Dinas Kehutanan Provinsi Sumatera Selatan',
+                    'alasan' => 'Keperluan mendesak keluarga',
+                    'alamat_selama_cuti' => 'Palembang',
+                    'telepon' => '081234567890',
+                ],
+            ])
+            ->assertRedirect(route('pengajuan-surat.index'));
+
+        $pengajuan = PengajuanSurat::where('perihal', 'Pengajuan alasan penting')->firstOrFail();
+        $this->assertSame('Cuti alasan penting', $pengajuan->metadata['cuti_quota']['jenis_cuti']);
+        $this->assertSame(12, $pengajuan->metadata['cuti_quota']['quota_days']);
+        $this->assertSame(12, $pengajuan->metadata['cuti_quota']['requested_days']);
+        $this->assertSame(0, $pengajuan->metadata['cuti_quota']['remaining_days_after_request']);
+    }
+
+    public function test_surat_cuti_melahirkan_is_limited_to_three_months(): void
+    {
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $jenisSurat = JenisSurat::where('slug', 'surat-cuti')->firstOrFail();
+
+        $this->actingAs($staff)
+            ->from(route('pengajuan-surat.create'))
+            ->post(route('pengajuan-surat.store'), [
+                'jenis_surat_id' => $jenisSurat->id,
+                'tanggal_pengajuan' => '2026-08-12',
+                'perihal' => 'Pengajuan cuti melahirkan lebih dari kuota',
+                'fields' => [
+                    'jenis_cuti' => 'Cuti melahirkan',
+                    'tanggal_mulai' => '2026-08-17',
+                    'tanggal_selesai' => '2026-11-17',
+                    'unit_kerja' => 'Dinas Kehutanan Provinsi Sumatera Selatan',
+                    'alasan' => 'Persalinan',
                     'alamat_selama_cuti' => 'Palembang',
                     'telepon' => '081234567890',
                 ],
