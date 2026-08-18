@@ -2,9 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\DigitalSignature;
 use App\Models\JenisSurat;
 use App\Models\PengajuanSurat;
+use App\Models\SignatureKey;
 use App\Models\User;
+use App\Services\SuratTemplateService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
@@ -31,8 +34,13 @@ class PengajuanSuratPhaseOneTest extends TestCase
 
     private function documentXmlFromDocxResponse($response): string
     {
+        return $this->documentXmlFromDocxBinary($response->getContent());
+    }
+
+    private function documentXmlFromDocxBinary(string $docx): string
+    {
         $temp = tempnam(sys_get_temp_dir(), 'docx-test');
-        file_put_contents($temp, $response->getContent());
+        file_put_contents($temp, $docx);
 
         $zip = new \ZipArchive;
         $zip->open($temp);
@@ -149,6 +157,20 @@ class PengajuanSuratPhaseOneTest extends TestCase
             'password' => 'password',
         ])
             ->assertSessionHasErrors('nip');
+
+        $this->assertGuest();
+    }
+
+    public function test_login_rejects_nip_that_is_not_exactly_18_digits(): void
+    {
+        $this->seed();
+
+        foreach (['12345678901234567', '1234567890123456789', '12345678901234567A'] as $nip) {
+            $this->post(route('login'), [
+                'nip' => $nip,
+                'password' => 'password',
+            ])->assertSessionHasErrors('nip');
+        }
 
         $this->assertGuest();
     }
@@ -410,6 +432,29 @@ class PengajuanSuratPhaseOneTest extends TestCase
         ]);
     }
 
+    public function test_admin_cannot_create_user_with_invalid_nip_length(): void
+    {
+        $this->seed();
+
+        $admin = User::where('role', 'admin')->firstOrFail();
+        $kasi = User::where('role', 'kasi')->firstOrFail();
+
+        foreach (['19900101202001100', '1990010120200110019', '19900101202001100A'] as $nip) {
+            $this->actingAs($admin)
+                ->from(route('users.create'))
+                ->post(route('users.store'), [
+                    'name' => 'Staff Invalid '.$nip,
+                    'nip' => $nip,
+                    'password' => 'password123',
+                    'role' => 'staff',
+                    'jabatan' => 'Staf Administrasi',
+                    'parent_id' => $kasi->id,
+                ])
+                ->assertRedirect(route('users.create'))
+                ->assertSessionHasErrors('nip');
+        }
+    }
+
     public function test_non_admin_cannot_view_user_detail(): void
     {
         $this->seed();
@@ -561,6 +606,7 @@ class PengajuanSuratPhaseOneTest extends TestCase
         $documentXml = $this->documentXmlFromDocxResponse($docxResponse);
         $this->assertStringContainsString('NOTA DINAS', $documentXml);
         $this->assertStringContainsString('Koordinasi internal', $documentXml);
+        $this->assertStringContainsString('Koordinasi internal Bulan Juli 2026', $documentXml);
         $this->assertStringContainsString('Permohonan koordinasi tindak lanjut kegiatan.', $documentXml);
         $this->assertTrue(str_contains($documentXml, 'Narasi deforestasi custom dari form.'), 'DOCX memuat narasi deforestasi Nota Dinas.');
         $this->assertTrue(str_contains($documentXml, 'Keterangan deforestasi custom'), 'DOCX memuat keterangan IKK deforestasi.');
@@ -568,6 +614,118 @@ class PengajuanSuratPhaseOneTest extends TestCase
         $this->assertTrue(str_contains($documentXml, 'Meranti Deforestasi'), 'DOCX memuat baris lampiran deforestasi.');
         $this->assertTrue(str_contains($documentXml, 'Rekap keanekaragaman custom'), 'DOCX memuat rekap lampiran keanekaragaman.');
         $this->assertStringNotContainsString('Sistem E-Arsip Surat Digital', $documentXml);
+    }
+
+    public function test_signed_official_template_docx_contains_barcode_for_all_letter_types(): void
+    {
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $kabid = User::where('role', 'kabid')->firstOrFail();
+        $signatureKey = SignatureKey::create([
+            'user_id' => $kabid->id,
+            'public_key' => 'PUBLIC KEY',
+            'encrypted_private_key' => 'PRIVATE KEY',
+            'algorithm' => 'RSA-2048/SHA-512',
+            'is_active' => true,
+        ]);
+        $templateService = app(SuratTemplateService::class);
+
+        $formDataBySlug = [
+            'surat-cuti' => [
+                'nama_pegawai' => $staff->name,
+                'nip' => $staff->nip,
+                'jabatan_unit' => $staff->jabatan,
+                'unit_kerja' => 'Dinas Kehutanan Provinsi Sumatera Selatan',
+                'jenis_cuti' => 'Cuti tahunan',
+                'tanggal_mulai' => '2026-07-25',
+                'tanggal_selesai' => '2026-07-25',
+                'lama_cuti' => '1 hari',
+                'alasan' => 'Keperluan keluarga',
+                'alamat_selama_cuti' => 'Palembang',
+                'telepon' => '08123456789',
+                'atasan_langsung' => 'Kasi',
+            ],
+            'surat-tugas' => [
+                'nomor_surat' => '800.1.11.1/001/ST/Dishut.III/2026',
+                'dasar_pertama' => 'Peraturan Gubernur Sumatera Selatan Nomor: 48 Tahun 2016 tentang Susunan Organisasi, Uraian Tugas dan Fungsi Dinas Kehutanan Provinsi Sumatera Selatan.',
+                'dasar_kedua' => 'Surat Kepala Badan Perencanaan Pembangunan Daerah Nomor : 000.1.5/1517/Bappeda-IV/2026 Tanggal 21 Juli 2026 tentang Peningkatan Kapasitas dalam Rangka Pembangunan Rendah Karbon Daerah di Provinsi Sumatera Selatan.',
+                'pegawai_berangkat' => 'Mas Asep - NIP 199909062025211021 - Staf Lapangan',
+                'kegiatan' => 'Monitoring kawasan',
+                'tujuan_perjalanan' => 'Hutan Lindung',
+                'lama_perjalanan' => '2 hari / 25/07/2026 s.d. 26/07/2026',
+                'keterangan_biaya' => '-',
+                'kewajiban_laporan' => 'Melakukan pemantauan',
+                'penandatangan' => $kabid->name,
+            ],
+            'nota-dinas' => [
+                'kepada' => 'Kepala Dinas Kehutanan Provinsi Sumatera Selatan',
+                'tembusan' => '-',
+                'dari' => 'Kepala Bidang Perlindungan dan KSDAE',
+                'tanggal_nota' => '2026-07-25',
+                'nomor_nota' => '500.0.0.0/001/ND.DISHUT/I/2026',
+                'perihal_nota' => 'Penyampaian Capaian Indikator Kinerja Kunci (IKK) Bulan Februari 2026',
+                'bulan_laporan' => 'Juli',
+                'tahun_laporan' => '2026',
+                'bidang_pelapor' => 'Bidang Perlindungan dan KSDAE',
+                'isi_nota' => 'Isi nota dinas.',
+                'nama_penandatangan' => $kabid->name,
+                'jabatan_penandatangan' => $kabid->jabatan,
+                'nip_penandatangan' => $kabid->nip,
+                'pangkat_penandatangan' => '-',
+                'penandatangan' => $kabid->name,
+            ],
+            'surat-undangan' => [
+                'nomor_surat' => '500.4.6.4/3508/Dishut.III/2026',
+                'sifat' => 'Biasa',
+                'lampiran' => '-',
+                'hal' => 'Undangan Rapat',
+                'tujuan_undangan' => 'Kepala UPTD KPH Wilayah VIII Semendo',
+                'latar_belakang' => 'Dalam rangka koordinasi kegiatan.',
+                'hari_tanggal' => 'Jumat/31 Agustus 2026',
+                'waktu' => '10.00 WIB s.d Selesai',
+                'tempat' => 'Ruang rapat',
+                'meeting_id' => '-',
+                'passcode' => '-',
+                'agenda' => 'Koordinasi',
+                'kontak_konfirmasi' => 'Admin',
+                'penandatangan' => $kabid->name,
+            ],
+        ];
+
+        foreach ($formDataBySlug as $index => $formData) {
+            $slug = (string) $index;
+            $jenisSurat = JenisSurat::where('slug', $slug)->firstOrFail();
+            $pengajuan = PengajuanSurat::create([
+                'jenis_surat_id' => $jenisSurat->id,
+                'pemohon_id' => $staff->id,
+                'nomor_pengajuan' => 'PGJ-20260724-'.str_pad((string) ($jenisSurat->id + 7000), 4, '0', STR_PAD_LEFT),
+                'tanggal_pengajuan' => '2026-07-24',
+                'perihal' => 'Dokumen '.$jenisSurat->nama,
+                'status' => 'selesai',
+                'posisi_saat_ini' => $staff->id,
+                'metadata' => ['form_data' => $formData],
+            ]);
+            $signature = DigitalSignature::create([
+                'pengajuan_surat_id' => $pengajuan->id,
+                'signature_key_id' => $signatureKey->id,
+                'signer_id' => $kabid->id,
+                'document_hash' => hash('sha512', $slug),
+                'signature' => base64_encode('signature-'.$slug),
+                'public_key' => 'PUBLIC KEY',
+                'algorithm' => 'RSA-2048/SHA-512',
+                'verification_code' => 'ES'.strtoupper(substr(str_replace('-', '', $slug), 0, 10)),
+                'signed_at' => now(),
+                'metadata' => [],
+            ]);
+
+            $pengajuan->setRelation('digitalSignature', $signature->setRelation('signer', $kabid));
+            $documentXml = $this->documentXmlFromDocxBinary($templateService->docxBinary($pengajuan));
+
+            $this->assertStringContainsString('Scan barcode / verifikasi kode', $documentXml, $slug.' signed DOCX has barcode label.');
+            $this->assertStringContainsString($signature->verification_code, $documentXml, $slug.' signed DOCX has verification code.');
+            $this->assertStringContainsString($kabid->name, $documentXml, $slug.' signed DOCX has signer name.');
+        }
     }
 
     public function test_surat_tugas_docx_export_uses_official_template_layout(): void
@@ -1011,6 +1169,10 @@ class PengajuanSuratPhaseOneTest extends TestCase
 
         $this->assertStringContainsString('Scan barcode', $signedPdf);
         $this->assertStringContainsString($signature->verification_code, $signedPdf);
+        $signedDocxXml = $this->documentXmlFromDocxBinary(Storage::disk('local')->get($signature->metadata['file_paths']['docx']));
+        $this->assertStringContainsString('Scan barcode / verifikasi kode', $signedDocxXml);
+        $this->assertStringContainsString($signature->verification_code, $signedDocxXml);
+        $this->assertStringContainsString($kabid->name, $signedDocxXml);
 
         $this->actingAs($kabid)
             ->get(route('pengajuan-surat.show', $pengajuan))

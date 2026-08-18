@@ -69,8 +69,8 @@
                                 </label>
                                 <input type="text" name="nip" class="form-control"
                                     placeholder="Contoh: 198705122010011002"
-                                    value="{{ old('nip') }}" required>
-                                <small class="text-muted">Dipakai untuk login dan otomatis terisi di form cuti pegawai</small>
+                                    value="{{ old('nip') }}" inputmode="numeric" pattern="[0-9]{18}" minlength="18" maxlength="18" required>
+                                <small class="text-muted">Harus 18 angka. Dipakai untuk login dan otomatis terisi di form cuti pegawai</small>
                             </div>
                         </div>
 

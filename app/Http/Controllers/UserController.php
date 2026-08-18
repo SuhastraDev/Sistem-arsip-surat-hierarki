@@ -44,7 +44,7 @@ class UserController extends Controller
 
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'nip' => ['required', 'string', 'max:50', 'unique:users,nip'],
+            'nip' => ['required', 'digits:18', 'unique:users,nip'],
             'password' => ['required', 'string', 'min:6'],
             'role' => ['required', Rule::in(['admin', 'kabid', 'kasi', 'staff'])],
             'jabatan' => ['required', 'string', 'max:255'],

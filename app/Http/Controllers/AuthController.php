@@ -20,7 +20,7 @@ class AuthController extends Controller
     {
         // Validasi input
         $data = $request->validate([
-            'nip' => ['required', 'string'],
+            'nip' => ['required', 'digits:18'],
             'password' => ['required'],
         ]);
 

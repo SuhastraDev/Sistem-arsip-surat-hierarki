@@ -555,6 +555,10 @@ class SuratTemplateService
             $xml = $this->replaceWordText($xml, 'Hormat Saya, I Gusti Ayu Kusuma Wardani, S.Hut NIP. 19940201 202203 2 011', "Hormat Saya,\n\n\n".($data['nama_pegawai'] ?? '-')."\nNIP. ".($data['nip'] ?? '-'));
             $xml = $this->replaceWordText($xml, 'Plh. Kepala Seksi Pengendalian Kerusakan dan Pengamanan Hutan, Ferry Yurisman, S.P NIP. 19730228 199003 1 009', $data['atasan_langsung'] ?? '-');
 
+            if ($pengajuanSurat->digitalSignature) {
+                $xml = $this->replaceWordText($xml, 'Dr. Syafrul Yunardy, S.Hut., M.E.', $this->digitalSignatureBlockText($pengajuanSurat));
+            }
+
             return $this->markCutiType($xml, $data['jenis_cuti'] ?? '');
         });
     }
@@ -573,8 +577,7 @@ class SuratTemplateService
             $xml = $this->replaceWordText($xml, 'Biaya yang timbul dari kegiatan tersebut dibebankan pada Badan Perencanaan Pembangunan Daerah. Membuat Laporan tertulis hasil pelaksanaan tugas tersebut 1 (satu) minggu setelah pelaksanaan tugas kepada Kepala Dinas Kehutanan Provinsi Sumatera Selatan.', trim(($data['keterangan_biaya'] ?? '')."\n".($data['kewajiban_laporan'] ?? '')) ?: '-');
 
             if ($pengajuanSurat->digitalSignature) {
-                $signatureText = 'Ditandatangani digital: '.$pengajuanSurat->digitalSignature->verification_code;
-                $xml = $this->replaceWordText($xml, 'SUSILO HARTONO, S.Hut., M.Si', $signatureText."\n".$pengajuanSurat->digitalSignature->signer->name);
+                $xml = $this->replaceWordText($xml, 'SUSILO HARTONO, S.Hut., M.Si', $this->digitalSignatureBlockText($pengajuanSurat));
             } elseif (! empty($data['penandatangan'])) {
                 $xml = $this->replaceWordText($xml, 'SUSILO HARTONO, S.Hut., M.Si', $data['penandatangan']);
             }
@@ -585,10 +588,11 @@ class SuratTemplateService
 
     private function makeNotaDinasDocx(PengajuanSurat $pengajuanSurat): string
     {
-        return $this->makeTemplateDocx($pengajuanSurat, 'nota-dinas', function (string $xml, array $data): string {
+        return $this->makeTemplateDocx($pengajuanSurat, 'nota-dinas', function (string $xml, array $data, PengajuanSurat $pengajuanSurat): string {
             $bulan = $data['bulan_laporan'] ?? $this->monthNameFromDate($data['tanggal_nota'] ?? null);
             $tahun = $data['tahun_laporan'] ?? date('Y', strtotime($data['tanggal_nota'] ?? date('Y-m-d')));
             $bulanTahun = trim($bulan.' '.$tahun);
+            $notaTitle = $this->notaDinasTitle($data, $bulan, $tahun);
             $tanggalNota = $this->formatIndonesianLongDate($data['tanggal_nota'] ?? null);
             $tanggalLampiran = $this->formatIndonesianLongDate($data['tanggal_lampiran'] ?? $data['tanggal_nota'] ?? null);
             $jabatanPenandatangan = $data['jabatan_penandatangan'] ?? $data['dari'] ?? '-';
@@ -602,7 +606,7 @@ class SuratTemplateService
             $xml = $this->replaceWordText($xml, 'Maret 2026', $tanggalNota, 1);
             $xml = $this->replaceWordText($xml, '500.0.0.0/            /ND.DISHUT/I/2026', $data['nomor_nota'] ?? '-');
             $xml = $this->replaceWordText($xml, '1 (satu) berkas', isset($data['lampiran']) ? '1 (satu) berkas' : '-');
-            $xml = $this->replaceWordText($xml, 'Penyampaian Capaian Indikator Kinerja Kunci (IKK) Bulan Februari 2026', $data['perihal_nota'] ?? '-');
+            $xml = $this->replaceWordText($xml, 'Penyampaian Capaian Indikator Kinerja Kunci (IKK) Bulan Februari 2026', $notaTitle);
             $xml = $this->replaceWordText($xml, 'Menindaklanjuti Nota Dinas Kepala Dinas Kehutanan Nomor 000.7.2.8/126/ND. DISHUT/I/2026 perihal Capaian Indikator Kinerja Kunci (IKK) Bulan Februari Tahun 2026, bersama ini kami sampaikan laporan capaian IKK Bidang Perlindungan dan KSDAE sampai dengan Bulan Februari Tahun 2026. Berdasarkan hasil pengumpulan data dari masing-masing bidang teknis, capaian IKK Bulan Februari 2026 menunjukkan progres yang berjalan sesuai dengan target tahunan yang telah ditetapkan dalam dokumen perencanaan kinerja. Realisasi kinerja dihitung berdasarkan perbandingan antara target tahunan dengan capaian kumulatif sampai dengan bulan berjalan.', $data['isi_nota'] ?? '-');
             $xml = $this->replaceWordText($xml, 'Pada Bidang Perlindungan dan KSDAE, kontribusi utama terhadap IKK berada pada indikator Persentase Kerusakan Hutan per Tahun (Deforestasi). Penghitungan indikator tersebut dilakukan berdasarkan analisis data yang bersumber dari aktivitas ilegal yang menyebabkan perubahan tutupan hutan, antara lain perambahan kawasan, kebakaran hutan dan lahan (karhutla), pertambangan tanpa izin (PETI), serta penebangan liar (illegal logging). Data dihimpun melalui kegiatan patroli pengamanan hutan, laporan UPTD KPH serta verifikasi dan analisis spasial.', $data['narasi_deforestasi'] ?? '-');
             $xml = $this->replaceWordText($xml, 'Sementara itu, terhadap indikator Indeks Pengelolaan Keanekaragaman Hayati Daerah dan Indeks Keanekaragaman Hayati, peran yang dilaksanakan bersifat supporting kegiatan melalui pelaksanaan perlindungan habitat, penanganan interaksi negatif manusia dan satwa liar, penguatan kolaborasi dengan mitra kehutanan, serta pengumpulan data dukung sebagai bagian dari komponen penilaian indeks. Capaian kedua indikator tersebut bersifat lintas bidang dan terintegrasi dalam pelaksanaan program sustainable forest management. Adapun capaian masingmasing indikator sebagaimana tercantum dalam lampiran, yang merupakan bagian tidak terpisahkan dari nota dinas ini.', $data['narasi_keanekaragaman'] ?? '-');
@@ -618,6 +622,10 @@ class SuratTemplateService
             $xml = $this->replaceWordTextAll($xml, 'Kepala Bidang Perlindungan Dan KSDAE,', $jabatanPenandatangan.',');
             $xml = $this->replaceWordTextAll($xml, 'Kepala Bidang Perlindungan dan KSDAE', $jabatanPenandatangan);
             $xml = $this->replaceWordTextAll($xml, 'Bidang Perlindungan dan KSDAE', $data['bidang_pelapor'] ?? $jabatanPenandatangan);
+            if ($pengajuanSurat->digitalSignature) {
+                $namaPenandatangan = $this->digitalSignatureBlockText($pengajuanSurat);
+            }
+
             $xml = $this->replaceWordTextAll($xml, 'Dr. SYAFRUL YUNARDY, S.Hut., M.E', $namaPenandatangan);
             $xml = $this->replaceWordTextAll($xml, 'Dr. SYAFRUL YUNARDY, S.Hut.,M.E', $namaPenandatangan);
             $xml = $this->replaceWordTextAll($xml, 'Pembina Utama Madya / IV.d', $pangkatPenandatangan);
@@ -649,7 +657,7 @@ class SuratTemplateService
             $xml = $this->replaceWordText($xml, 'Penyampaian Rencana Kerja Tenaga Ahli Inventarisasi Potensi Kawasan', $data['agenda'] ?? '-');
             $xml = $this->replaceWordText($xml, 'Bernilai Ekosistem Penting (KBEP) Kewenangan Daerah Provinsi Sumatera Selatan Tahun Anggaran 2026', '');
             $xml = $this->replaceWordText($xml, 'Sdri. I Gusti Ayu Kusuma Wardani (0813-7391-4100).', $data['kontak_konfirmasi'] ?? '-');
-            $xml = $this->replaceWordText($xml, 'Drs. H. KOIMUDIN, S.H., M.M', $data['penandatangan'] ?? '-');
+            $xml = $this->replaceWordText($xml, 'Drs. H. KOIMUDIN, S.H., M.M', $pengajuanSurat->digitalSignature ? $this->digitalSignatureBlockText($pengajuanSurat) : ($data['penandatangan'] ?? '-'));
 
             return $xml;
         });
@@ -705,6 +713,46 @@ class SuratTemplateService
         }
 
         return $xml;
+    }
+
+    private function notaDinasTitle(array $data, string $bulan, string $tahun): string
+    {
+        $title = trim((string) ($data['perihal_nota'] ?? 'Penyampaian Capaian Indikator Kinerja Kunci (IKK) Bulan '.$bulan.' '.$tahun));
+        $title = preg_replace('/Bulan\s+[A-Za-z]+\s+\d{4}/u', 'Bulan '.$bulan.' '.$tahun, $title) ?? $title;
+
+        if (! str_contains($title, $bulan) || ! str_contains($title, $tahun)) {
+            $title = rtrim($title, '.').' Bulan '.$bulan.' '.$tahun;
+        }
+
+        return $title;
+    }
+
+    private function digitalSignatureBlockText(PengajuanSurat $pengajuanSurat): string
+    {
+        $signature = $pengajuanSurat->digitalSignature;
+
+        if (! $signature) {
+            return '-';
+        }
+
+        return implode("\n", [
+            'Scan barcode / verifikasi kode',
+            $this->barcodeText($signature->verification_code),
+            $signature->verification_code,
+            'Ditandatangani digital',
+            $signature->signer->name,
+        ]);
+    }
+
+    private function barcodeText(string $value): string
+    {
+        $segments = [];
+
+        foreach (str_split($value) as $index => $character) {
+            $segments[] = (ord($character) + $index) % 2 === 0 ? '|||' : '| |';
+        }
+
+        return implode('', $segments);
     }
 
     private function parsePegawaiBerangkat(string $raw): array

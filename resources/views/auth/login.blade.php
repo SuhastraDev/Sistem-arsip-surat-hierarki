@@ -433,8 +433,8 @@
                         <label class="form-label">NIP</label>
                         <div class="input-wrapper">
                             <i class="fas fa-id-card input-icon"></i>
-                            <input type="text" name="nip" id="nipInput" class="form-control"
-                                placeholder="Masukkan NIP" value="{{ old('nip') }}" required autofocus>
+                    <input type="text" name="nip" id="nipInput" class="form-control"
+                        placeholder="Masukkan NIP" value="{{ old('nip') }}" inputmode="numeric" pattern="[0-9]{18}" minlength="18" maxlength="18" required autofocus>
                         </div>
                     </div>
 
