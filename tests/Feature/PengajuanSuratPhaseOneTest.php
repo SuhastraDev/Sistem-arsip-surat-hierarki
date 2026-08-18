@@ -398,8 +398,42 @@ class PengajuanSuratPhaseOneTest extends TestCase
                     'tanggal_nota' => '2026-07-24',
                     'lampiran' => UploadedFile::fake()->create('lampiran-nota.pdf', 100, 'application/pdf'),
                     'perihal_nota' => 'Koordinasi internal',
+                    'nomor_rujukan' => '000.7.2.8/999/ND.DISHUT/I/2026',
+                    'perihal_rujukan' => 'Capaian IKK Custom',
+                    'bulan_laporan' => 'Juli',
+                    'tahun_laporan' => '2026',
+                    'bidang_pelapor' => 'Bidang Perlindungan dan KSDAE',
                     'isi_nota' => 'Permohonan koordinasi tindak lanjut kegiatan.',
-                    'rincian_lampiran' => 'Daftar kegiatan',
+                    'narasi_deforestasi' => 'Narasi deforestasi custom dari form.',
+                    'narasi_keanekaragaman' => 'Narasi pengelolaan keanekaragaman custom.',
+                    'narasi_penutup' => 'Penutup custom nota dinas.',
+                    'ikk_deforestasi_target' => '0,111',
+                    'ikk_deforestasi_capaian_bulan' => '1,22',
+                    'ikk_deforestasi_capaian_sd' => '2,33',
+                    'ikk_deforestasi_keterangan' => 'Keterangan deforestasi custom',
+                    'ikk_pengelolaan_target' => '0,222',
+                    'ikk_pengelolaan_capaian_bulan' => '3,44',
+                    'ikk_pengelolaan_capaian_sd' => '4,55',
+                    'ikk_pengelolaan_keterangan' => 'Keterangan pengelolaan custom',
+                    'ikk_keanekaragaman_target' => '0,333',
+                    'ikk_keanekaragaman_capaian_bulan' => '5,66',
+                    'ikk_keanekaragaman_capaian_sd' => '6,77',
+                    'ikk_keanekaragaman_keterangan' => 'Keterangan keanekaragaman custom',
+                    'kph_capaian' => 'Meranti Custom | 9,99 | 8,88 | 7,77 | KPH custom',
+                    'deforestasi_rincian' => 'Meranti Deforestasi | A | B | C | D | 123 ha | 0,456 | Lokasi custom',
+                    'rekap_deforestasi_target' => '0,444',
+                    'rekap_deforestasi_capaian_bulan' => '7,88',
+                    'rekap_deforestasi_capaian_sd' => '8,99',
+                    'rekap_deforestasi_keterangan' => 'Rekap deforestasi custom',
+                    'rekap_pengelolaan_target' => '0,555',
+                    'rekap_pengelolaan_capaian_bulan' => '9,11',
+                    'rekap_pengelolaan_capaian_sd' => '10,22',
+                    'rekap_pengelolaan_keterangan' => 'Rekap pengelolaan custom',
+                    'rekap_keanekaragaman_target' => '0,666',
+                    'rekap_keanekaragaman_capaian_bulan' => '11,33',
+                    'rekap_keanekaragaman_capaian_sd' => '12,44',
+                    'rekap_keanekaragaman_keterangan' => 'Rekap keanekaragaman custom',
+                    'tanggal_lampiran' => '2026-07-25',
                 ],
             ]);
 
@@ -433,6 +467,11 @@ class PengajuanSuratPhaseOneTest extends TestCase
         $this->assertStringContainsString('NOTA DINAS', $documentXml);
         $this->assertStringContainsString('Koordinasi internal', $documentXml);
         $this->assertStringContainsString('Permohonan koordinasi tindak lanjut kegiatan.', $documentXml);
+        $this->assertTrue(str_contains($documentXml, 'Narasi deforestasi custom dari form.'), 'DOCX memuat narasi deforestasi Nota Dinas.');
+        $this->assertTrue(str_contains($documentXml, 'Keterangan deforestasi custom'), 'DOCX memuat keterangan IKK deforestasi.');
+        $this->assertTrue(str_contains($documentXml, 'Meranti Custom'), 'DOCX memuat baris lampiran KPH capaian.');
+        $this->assertTrue(str_contains($documentXml, 'Meranti Deforestasi'), 'DOCX memuat baris lampiran deforestasi.');
+        $this->assertTrue(str_contains($documentXml, 'Rekap keanekaragaman custom'), 'DOCX memuat rekap lampiran keanekaragaman.');
         $this->assertStringNotContainsString('Sistem E-Arsip Surat Digital', $documentXml);
     }
 

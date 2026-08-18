@@ -69,12 +69,17 @@ class PengajuanSuratController extends Controller
 
         $jenisSurats = JenisSurat::aktif()->orderBy('nama')->get();
         $templateDefinitions = $this->templateService->definitions();
+        $kabidProfile = $this->kabidProfile();
         $pegawaiProfile = [
             'name' => Auth::user()->name,
             'nip' => Auth::user()->nip ?: '-',
             'jabatan' => Auth::user()->jabatan ?: '-',
             'atasan_langsung' => $this->atasanLangsung(),
-            'kabid_penandatangan' => $this->kabidPenandatangan(),
+            'kabid_penandatangan' => $kabidProfile['summary'],
+            'kabid_nama' => $kabidProfile['name'],
+            'kabid_jabatan' => $kabidProfile['jabatan'],
+            'kabid_nip' => $kabidProfile['nip'],
+            'kabid_pangkat' => $kabidProfile['pangkat'],
             'surat_tugas_nomor' => $this->generateNomorSuratTugas(),
         ];
         $cutiUsage = [
@@ -304,7 +309,16 @@ class PengajuanSuratController extends Controller
 
         $fields['kepada'] = 'Kepala Dinas Kehutanan Provinsi Sumatera Selatan';
         $fields['nomor_nota'] = $this->generateNomorNotaDinas();
-        $fields['penandatangan'] = $this->kabidPenandatangan();
+        $kabidProfile = $this->kabidProfile();
+        $fields['penandatangan'] = $kabidProfile['summary'];
+        $fields['nama_penandatangan'] = $kabidProfile['name'];
+        $fields['jabatan_penandatangan'] = $kabidProfile['jabatan'];
+        $fields['nip_penandatangan'] = $kabidProfile['nip'];
+        $fields['pangkat_penandatangan'] = $kabidProfile['pangkat'];
+
+        $fields['bulan_laporan'] = $fields['bulan_laporan'] ?? $this->monthNameFromDate($fields['tanggal_nota'] ?? now()->toDateString());
+        $fields['tahun_laporan'] = $fields['tahun_laporan'] ?? date('Y', strtotime($fields['tanggal_nota'] ?? now()->toDateString()));
+        $fields['bidang_pelapor'] = $fields['bidang_pelapor'] ?? $fields['dari'] ?? $kabidProfile['jabatan'];
 
         return $fields;
     }
@@ -346,13 +360,54 @@ class PengajuanSuratController extends Controller
 
     private function kabidPenandatangan(): string
     {
+        return $this->kabidProfile()['summary'];
+    }
+
+    private function kabidProfile(): array
+    {
         $kabid = User::where('role', 'kabid')->first();
 
         if (! $kabid) {
-            return 'Kabid belum diatur';
+            return [
+                'name' => 'Kabid belum diatur',
+                'jabatan' => 'Kepala Bidang',
+                'nip' => '-',
+                'pangkat' => '-',
+                'summary' => 'Kabid belum diatur',
+            ];
         }
 
-        return trim($kabid->name.' - '.($kabid->jabatan ?: 'Kepala Bidang'));
+        $jabatan = $kabid->jabatan ?: 'Kepala Bidang';
+        $nip = $kabid->nip ?: '-';
+
+        return [
+            'name' => $kabid->name,
+            'jabatan' => $jabatan,
+            'nip' => $nip,
+            'pangkat' => '-',
+            'summary' => trim($kabid->name.' - '.$jabatan),
+        ];
+    }
+
+    private function monthNameFromDate(?string $date): string
+    {
+        $months = [
+            1 => 'Januari',
+            2 => 'Februari',
+            3 => 'Maret',
+            4 => 'April',
+            5 => 'Mei',
+            6 => 'Juni',
+            7 => 'Juli',
+            8 => 'Agustus',
+            9 => 'September',
+            10 => 'Oktober',
+            11 => 'November',
+            12 => 'Desember',
+        ];
+        $timestamp = strtotime($date ?: now()->toDateString());
+
+        return $months[(int) date('n', $timestamp)];
     }
 
     private function attachUploadedFiles(Request $request, string $slug, array $fields): array

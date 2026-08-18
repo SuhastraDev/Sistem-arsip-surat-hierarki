@@ -112,6 +112,10 @@ $oldFields = old('fields', []);
             'user.atasan_langsung': pegawaiProfile.atasan_langsung || '',
             'nota.kepada': 'Kepala Dinas Kehutanan Provinsi Sumatera Selatan',
             'nota.kabid': pegawaiProfile.kabid_penandatangan || '',
+            'nota.kabid_nama': pegawaiProfile.kabid_nama || '',
+            'nota.kabid_jabatan': pegawaiProfile.kabid_jabatan || '',
+            'nota.kabid_nip': pegawaiProfile.kabid_nip || '',
+            'nota.kabid_pangkat': pegawaiProfile.kabid_pangkat || '',
             'surat_tugas.nomor_surat': pegawaiProfile.surat_tugas_nomor || '',
         };
 
@@ -141,6 +145,7 @@ $oldFields = old('fields', []);
                 return;
             }
 
+            let activeGroup = null;
             const fields = Object.entries(definition.fields).map(([name, field]) => {
                 const required = field.required ? 'required' : '';
                 const requiredMark = field.required ? '<span class="text-danger">*</span>' : '';
@@ -149,11 +154,15 @@ $oldFields = old('fields', []);
                 const placeholder = escapeHtml(field.placeholder || '');
                 const readonly = field.readonly ? 'readonly' : '';
                 const helper = field.readonly ? '<div class="form-text">Terisi otomatis dari data akun pegawai.</div>' : '';
+                const groupHeader = field.group && field.group !== activeGroup
+                    ? `<div class="col-12 field-group-divider"><span>${escapeHtml(field.group)}</span></div>`
+                    : '';
+                activeGroup = field.group || activeGroup;
 
                 if (field.type === 'file') {
                     const accept = escapeHtml(field.accept || '');
 
-                    return `
+                    return `${groupHeader}
                         <div class="col-12">
                             <label class="form-label fw-semibold">${field.label} ${requiredMark}</label>
                             <input type="file" name="fields[${name}]" class="form-control" accept="${accept}" ${required}>
@@ -162,7 +171,7 @@ $oldFields = old('fields', []);
                 }
 
                 if (field.type === 'textarea') {
-                    return `
+                    return `${groupHeader}
                         <div class="col-12">
                             <label class="form-label fw-semibold">${field.label} ${requiredMark}</label>
                             <textarea name="fields[${name}]" class="form-control" rows="3" placeholder="${placeholder}" ${required} ${readonly}>${value}</textarea>
@@ -177,7 +186,7 @@ $oldFields = old('fields', []);
                         return `<option value="${safeOption}" ${selected}>${safeOption}</option>`;
                     }).join('');
 
-                    return `
+                    return `${groupHeader}
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">${field.label} ${requiredMark}</label>
                             <select name="fields[${name}]" class="form-select" ${required}>
@@ -187,7 +196,7 @@ $oldFields = old('fields', []);
                         </div>`;
                 }
 
-                return `
+                return `${groupHeader}
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">${field.label} ${requiredMark}</label>
                         <input type="${field.type}" name="fields[${name}]" class="form-control" value="${value}" placeholder="${placeholder}" ${required} ${readonly}>
@@ -489,6 +498,25 @@ $oldFields = old('fields', []);
         color: #475569;
         font-size: .8rem;
         margin: 2px 0 0;
+    }
+
+    .field-group-divider {
+        align-items: center;
+        color: #0f766e;
+        display: flex;
+        font-size: .72rem;
+        font-weight: 900;
+        gap: 10px;
+        letter-spacing: .08em;
+        margin-top: 4px;
+        text-transform: uppercase;
+    }
+
+    .field-group-divider::after {
+        background: #cbd5e1;
+        content: "";
+        flex: 1;
+        height: 1px;
     }
 
     .quota-panel {
