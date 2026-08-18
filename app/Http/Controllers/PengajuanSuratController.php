@@ -98,7 +98,7 @@ class PengajuanSuratController extends Controller
 
         $baseData = $request->validate([
             'jenis_surat_id' => ['required', 'exists:jenis_surats,id'],
-            'tanggal_pengajuan' => ['required', 'date'],
+            'tanggal_pengajuan' => ['required', 'date', 'after_or_equal:today'],
             'perihal' => ['required', 'string', 'max:1000'],
         ]);
 

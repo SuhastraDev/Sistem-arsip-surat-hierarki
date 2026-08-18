@@ -64,7 +64,7 @@
 
                     <div class="mb-4">
                         <label class="form-label fw-semibold">Tanggal Pengajuan</label>
-                        <input type="date" name="tanggal_pengajuan" class="form-control form-control-lg" value="{{ old('tanggal_pengajuan', date('Y-m-d')) }}" required>
+                        <input type="date" name="tanggal_pengajuan" class="form-control form-control-lg" value="{{ old('tanggal_pengajuan', date('Y-m-d')) }}" min="{{ date('Y-m-d') }}" required>
                     </div>
 
                     <div class="mb-4">
@@ -105,6 +105,8 @@ $oldFields = old('fields', []);
         const select = document.querySelector('select[name="jenis_surat_id"]');
         const panel = document.getElementById('requirementPanel');
         const submitButton = document.getElementById('submitPengajuanButton');
+        const today = new Date();
+        const todayValue = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
         const systemValues = {
             'user.name': pegawaiProfile.name,
             'user.nip': pegawaiProfile.nip,
@@ -199,7 +201,7 @@ $oldFields = old('fields', []);
                 return `${groupHeader}
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">${field.label} ${requiredMark}</label>
-                        <input type="${field.type}" name="fields[${name}]" class="form-control" value="${value}" placeholder="${placeholder}" ${required} ${readonly}>
+                        <input type="${field.type}" name="fields[${name}]" class="form-control" value="${value}" placeholder="${placeholder}" ${field.type === 'date' ? `min="${todayValue}"` : ''} ${required} ${readonly}>
                         ${helper}
                     </div>`;
             }).join('');

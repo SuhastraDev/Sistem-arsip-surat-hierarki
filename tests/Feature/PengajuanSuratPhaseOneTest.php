@@ -7,12 +7,27 @@ use App\Models\PengajuanSurat;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class PengajuanSuratPhaseOneTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Carbon::setTestNow(Carbon::parse('2026-01-01 08:00:00'));
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+
+        parent::tearDown();
+    }
 
     private function documentXmlFromDocxResponse($response): string
     {
@@ -204,6 +219,84 @@ class PengajuanSuratPhaseOneTest extends TestCase
         $this->assertDatabaseMissing('pengajuan_surats', [
             'perihal' => 'Pengajuan surat tugas tanggal tidak valid',
         ]);
+    }
+
+    public function test_surat_cuti_rejects_past_leave_date(): void
+    {
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $jenisSurat = JenisSurat::where('slug', 'surat-cuti')->firstOrFail();
+
+        $this->actingAs($staff)
+            ->from(route('pengajuan-surat.create'))
+            ->post(route('pengajuan-surat.store'), [
+                'jenis_surat_id' => $jenisSurat->id,
+                'tanggal_pengajuan' => now()->toDateString(),
+                'perihal' => 'Cuti tanggal belakang',
+                'fields' => [
+                    'unit_kerja' => 'Dinas Kehutanan Provinsi Sumatera Selatan',
+                    'jenis_cuti' => 'Cuti tahunan',
+                    'tanggal_mulai' => now()->subDay()->toDateString(),
+                    'tanggal_selesai' => now()->toDateString(),
+                    'alasan' => 'Keperluan keluarga',
+                    'alamat_selama_cuti' => 'Palembang',
+                    'telepon' => '08123456789',
+                ],
+            ])
+            ->assertRedirect(route('pengajuan-surat.create'))
+            ->assertSessionHasErrors('fields.tanggal_mulai');
+    }
+
+    public function test_nota_dinas_rejects_past_note_date(): void
+    {
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $jenisSurat = JenisSurat::where('slug', 'nota-dinas')->firstOrFail();
+
+        $this->actingAs($staff)
+            ->from(route('pengajuan-surat.create'))
+            ->post(route('pengajuan-surat.store'), [
+                'jenis_surat_id' => $jenisSurat->id,
+                'tanggal_pengajuan' => now()->toDateString(),
+                'perihal' => 'Nota dinas tanggal belakang',
+                'fields' => [
+                    'dari' => 'Kepala Bidang Perlindungan dan KSDAE',
+                    'tanggal_nota' => now()->subDay()->toDateString(),
+                    'perihal_nota' => 'Koordinasi tanggal belakang',
+                    'isi_nota' => 'Isi nota dinas.',
+                ],
+            ])
+            ->assertRedirect(route('pengajuan-surat.create'))
+            ->assertSessionHasErrors('fields.tanggal_nota');
+    }
+
+    public function test_surat_tugas_rejects_past_travel_date(): void
+    {
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $jenisSurat = JenisSurat::where('slug', 'surat-tugas')->firstOrFail();
+
+        $this->actingAs($staff)
+            ->from(route('pengajuan-surat.create'))
+            ->post(route('pengajuan-surat.store'), [
+                'jenis_surat_id' => $jenisSurat->id,
+                'tanggal_pengajuan' => now()->toDateString(),
+                'perihal' => 'Surat tugas tanggal belakang',
+                'fields' => [
+                    'dasar_pertama' => 'Dasar pertama.',
+                    'dasar_kedua' => 'Dasar kedua.',
+                    'pegawai_berangkat' => '1. Rina Putri - NIP 198801012010012001 - Penata/III.c - Analis Kehutanan',
+                    'kegiatan' => 'Menghadiri rapat koordinasi.',
+                    'tujuan_perjalanan' => 'Palembang',
+                    'tanggal_mulai_perjalanan' => now()->subDay()->toDateString(),
+                    'tanggal_selesai_perjalanan' => now()->toDateString(),
+                ],
+            ])
+            ->assertRedirect(route('pengajuan-surat.create'))
+            ->assertSessionHasErrors('fields.tanggal_mulai_perjalanan');
     }
 
     public function test_admin_cannot_create_pengajuan_surat(): void

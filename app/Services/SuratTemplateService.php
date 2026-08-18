@@ -159,6 +159,12 @@ class SuratTemplateService
                 continue;
             }
 
+            if (($field['type'] ?? null) === 'date') {
+                $rules['fields.'.$key] = [$presenceRule, 'date', 'after_or_equal:today'];
+
+                continue;
+            }
+
             $rules['fields.'.$key] = [$presenceRule, 'string', 'max:'.($field['max'] ?? 2000)];
         }
 
