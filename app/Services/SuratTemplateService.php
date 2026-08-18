@@ -59,60 +59,11 @@ class SuratTemplateService
             ],
             'nota-dinas' => [
                 'title' => 'Nota Dinas',
-                'summary' => 'Mengikuti contoh Nota Dinas IKK Februari 2026 yang disediakan.',
-                'template_label' => 'Nota Dinas.pdf',
-                'template_docx' => 'Nota Dinas.docx',
-                'template_note' => 'Template resmi nota dinas: kepada, tembusan, dari, tanggal, nomor, lampiran, perihal, isi nota, dan lampiran capaian.',
-                'fields' => [
-                    'kepada' => ['label' => 'Kepada Yth.', 'type' => 'text', 'required' => true, 'readonly' => true, 'source' => 'nota.kepada', 'group' => 'Identitas nota', 'placeholder' => 'Terisi otomatis oleh sistem'],
-                    'tembusan' => ['label' => 'Tembusan', 'type' => 'text', 'required' => false, 'group' => 'Identitas nota', 'placeholder' => 'Contoh: Sekretaris u.b Kasubbag. Perencanaan, Evaluasi dan Pelaporan'],
-                    'dari' => ['label' => 'Dari', 'type' => 'text', 'required' => true, 'group' => 'Identitas nota', 'placeholder' => 'Contoh: Kepala Bidang Perlindungan dan KSDAE'],
-                    'tanggal_nota' => ['label' => 'Tanggal nota', 'type' => 'date', 'required' => true, 'group' => 'Identitas nota'],
-                    'nomor_nota' => ['label' => 'Nomor nota', 'type' => 'text', 'required' => true, 'readonly' => true, 'auto_calculated' => true, 'group' => 'Identitas nota', 'placeholder' => 'Terisi otomatis oleh sistem'],
-                    'lampiran' => ['label' => 'Lampiran', 'type' => 'file', 'required' => false, 'accept' => '.pdf,.doc,.docx,.jpg,.jpeg,.png', 'group' => 'Identitas nota', 'placeholder' => 'Upload lampiran nota dinas jika ada'],
-                    'perihal_nota' => ['label' => 'Perihal', 'type' => 'text', 'required' => true, 'group' => 'Identitas nota', 'placeholder' => 'Contoh: Penyampaian Capaian Indikator Kinerja Kunci (IKK) Bulan Februari 2026'],
-                    'nomor_rujukan' => ['label' => 'Nomor nota rujukan', 'type' => 'text', 'required' => false, 'group' => 'Narasi nota', 'placeholder' => 'Contoh: 000.7.2.8/126/ND.DISHUT/I/2026'],
-                    'perihal_rujukan' => ['label' => 'Perihal rujukan', 'type' => 'text', 'required' => false, 'group' => 'Narasi nota', 'placeholder' => 'Contoh: Capaian Indikator Kinerja Kunci (IKK)'],
-                    'bulan_laporan' => ['label' => 'Bulan laporan', 'type' => 'text', 'required' => false, 'group' => 'Narasi nota', 'placeholder' => 'Contoh: Februari. Kosongkan jika mengikuti tanggal nota.'],
-                    'tahun_laporan' => ['label' => 'Tahun laporan', 'type' => 'text', 'required' => false, 'group' => 'Narasi nota', 'placeholder' => 'Contoh: 2026. Kosongkan jika mengikuti tanggal nota.'],
-                    'bidang_pelapor' => ['label' => 'Bidang pelapor', 'type' => 'text', 'required' => false, 'group' => 'Narasi nota', 'placeholder' => 'Contoh: Bidang Perlindungan dan KSDAE'],
-                    'isi_nota' => ['label' => 'Paragraf pembuka laporan IKK', 'type' => 'textarea', 'required' => true, 'group' => 'Narasi nota', 'max' => 10000, 'placeholder' => 'Contoh: Menindaklanjuti Nota Dinas Kepala Dinas Kehutanan Nomor ... bersama ini kami sampaikan...'],
-                    'narasi_deforestasi' => ['label' => 'Narasi deforestasi', 'type' => 'textarea', 'required' => false, 'group' => 'Narasi nota', 'max' => 10000, 'placeholder' => 'Jelaskan sumber data, hasil perhitungan, dan kondisi deforestasi bulan berjalan.'],
-                    'narasi_keanekaragaman' => ['label' => 'Narasi pengelolaan / keanekaragaman', 'type' => 'textarea', 'required' => false, 'group' => 'Narasi nota', 'max' => 10000, 'placeholder' => 'Jelaskan capaian pengelolaan taman hutan raya atau dukungan keanekaragaman hayati.'],
-                    'narasi_penutup' => ['label' => 'Kalimat penutup', 'type' => 'textarea', 'required' => false, 'group' => 'Narasi nota', 'placeholder' => 'Contoh: Demikian disampaikan, atas perhatian dan kerja samanya diucapkan terima kasih.'],
-                    'ikk_deforestasi_target' => ['label' => 'Deforestasi - target', 'type' => 'text', 'required' => false, 'group' => 'Tabel IKK utama', 'placeholder' => 'Contoh: 0,367'],
-                    'ikk_deforestasi_capaian_bulan' => ['label' => 'Deforestasi - capaian bulan ini', 'type' => 'text', 'required' => false, 'group' => 'Tabel IKK utama', 'placeholder' => 'Contoh: 0,00'],
-                    'ikk_deforestasi_capaian_sd' => ['label' => 'Deforestasi - capaian s.d bulan ini', 'type' => 'text', 'required' => false, 'group' => 'Tabel IKK utama', 'placeholder' => 'Contoh: 0,00'],
-                    'ikk_deforestasi_keterangan' => ['label' => 'Deforestasi - keterangan', 'type' => 'text', 'required' => false, 'group' => 'Tabel IKK utama', 'placeholder' => 'Contoh: Data terlampir'],
-                    'ikk_pengelolaan_target' => ['label' => 'Pengelolaan - target', 'type' => 'text', 'required' => false, 'group' => 'Tabel IKK utama', 'placeholder' => 'Contoh: 0,615'],
-                    'ikk_pengelolaan_capaian_bulan' => ['label' => 'Pengelolaan - capaian bulan ini', 'type' => 'text', 'required' => false, 'group' => 'Tabel IKK utama', 'placeholder' => 'Contoh: 0'],
-                    'ikk_pengelolaan_capaian_sd' => ['label' => 'Pengelolaan - capaian s.d bulan ini', 'type' => 'text', 'required' => false, 'group' => 'Tabel IKK utama', 'placeholder' => 'Contoh: 0'],
-                    'ikk_pengelolaan_keterangan' => ['label' => 'Pengelolaan - keterangan', 'type' => 'text', 'required' => false, 'group' => 'Tabel IKK utama', 'placeholder' => 'Contoh: Belum ada realisasi'],
-                    'ikk_keanekaragaman_target' => ['label' => 'Keanekaragaman - target', 'type' => 'text', 'required' => false, 'group' => 'Tabel IKK utama', 'placeholder' => 'Contoh: 1,01'],
-                    'ikk_keanekaragaman_capaian_bulan' => ['label' => 'Keanekaragaman - capaian bulan ini', 'type' => 'text', 'required' => false, 'group' => 'Tabel IKK utama', 'placeholder' => 'Contoh: 0'],
-                    'ikk_keanekaragaman_capaian_sd' => ['label' => 'Keanekaragaman - capaian s.d bulan ini', 'type' => 'text', 'required' => false, 'group' => 'Tabel IKK utama', 'placeholder' => 'Contoh: 0'],
-                    'ikk_keanekaragaman_keterangan' => ['label' => 'Keanekaragaman - keterangan', 'type' => 'text', 'required' => false, 'group' => 'Tabel IKK utama', 'placeholder' => 'Contoh: Belum ada realisasi'],
-                    'kph_capaian' => ['label' => 'Lampiran KPH capaian pengelolaan', 'type' => 'textarea', 'required' => false, 'group' => 'Lampiran tabel', 'max' => 10000, 'placeholder' => "Format per baris: Nama KPH | Bobot | Capaian bulan ini | Capaian s.d bulan ini | Keterangan\nContoh: Meranti | 0,026 | 0 | 0 | -"],
-                    'deforestasi_rincian' => ['label' => 'Lampiran rincian deforestasi', 'type' => 'textarea', 'required' => false, 'group' => 'Lampiran tabel', 'max' => 10000, 'placeholder' => "Format per baris: Nama KPH | Kebakaran | Permukiman | Penebangan liar | Total rusak | Total ha | Persentase | Keterangan\nContoh: Meranti | - | - | - | - | 0,00 | 0,000 | -"],
-                    'rekap_deforestasi_target' => ['label' => 'Rekap deforestasi - target', 'type' => 'text', 'required' => false, 'group' => 'Rekap lampiran', 'placeholder' => 'Contoh: 0,367'],
-                    'rekap_deforestasi_capaian_bulan' => ['label' => 'Rekap deforestasi - capaian bulan ini', 'type' => 'text', 'required' => false, 'group' => 'Rekap lampiran', 'placeholder' => 'Contoh: 0,00'],
-                    'rekap_deforestasi_capaian_sd' => ['label' => 'Rekap deforestasi - capaian s.d bulan ini', 'type' => 'text', 'required' => false, 'group' => 'Rekap lampiran', 'placeholder' => 'Contoh: 0,00'],
-                    'rekap_deforestasi_keterangan' => ['label' => 'Rekap deforestasi - keterangan', 'type' => 'text', 'required' => false, 'group' => 'Rekap lampiran', 'placeholder' => 'Contoh: Data diolah dari laporan KPH'],
-                    'rekap_pengelolaan_target' => ['label' => 'Rekap pengelolaan - target', 'type' => 'text', 'required' => false, 'group' => 'Rekap lampiran', 'placeholder' => 'Contoh: 0,615'],
-                    'rekap_pengelolaan_capaian_bulan' => ['label' => 'Rekap pengelolaan - capaian bulan ini', 'type' => 'text', 'required' => false, 'group' => 'Rekap lampiran', 'placeholder' => 'Contoh: 0'],
-                    'rekap_pengelolaan_capaian_sd' => ['label' => 'Rekap pengelolaan - capaian s.d bulan ini', 'type' => 'text', 'required' => false, 'group' => 'Rekap lampiran', 'placeholder' => 'Contoh: 0'],
-                    'rekap_pengelolaan_keterangan' => ['label' => 'Rekap pengelolaan - keterangan', 'type' => 'text', 'required' => false, 'group' => 'Rekap lampiran', 'placeholder' => 'Contoh: Belum ada realisasi'],
-                    'rekap_keanekaragaman_target' => ['label' => 'Rekap keanekaragaman - target', 'type' => 'text', 'required' => false, 'group' => 'Rekap lampiran', 'placeholder' => 'Contoh: 1,01'],
-                    'rekap_keanekaragaman_capaian_bulan' => ['label' => 'Rekap keanekaragaman - capaian bulan ini', 'type' => 'text', 'required' => false, 'group' => 'Rekap lampiran', 'placeholder' => 'Contoh: 0'],
-                    'rekap_keanekaragaman_capaian_sd' => ['label' => 'Rekap keanekaragaman - capaian s.d bulan ini', 'type' => 'text', 'required' => false, 'group' => 'Rekap lampiran', 'placeholder' => 'Contoh: 0'],
-                    'rekap_keanekaragaman_keterangan' => ['label' => 'Rekap keanekaragaman - keterangan', 'type' => 'text', 'required' => false, 'group' => 'Rekap lampiran', 'placeholder' => 'Contoh: Belum ada realisasi'],
-                    'tanggal_lampiran' => ['label' => 'Tanggal lampiran', 'type' => 'date', 'required' => false, 'group' => 'Penandatangan', 'placeholder' => 'Kosongkan jika sama dengan tanggal nota'],
-                    'jabatan_penandatangan' => ['label' => 'Jabatan penandatangan', 'type' => 'text', 'required' => true, 'readonly' => true, 'source' => 'nota.kabid_jabatan', 'group' => 'Penandatangan', 'placeholder' => 'Terisi otomatis oleh sistem'],
-                    'nama_penandatangan' => ['label' => 'Nama penandatangan', 'type' => 'text', 'required' => true, 'readonly' => true, 'source' => 'nota.kabid_nama', 'group' => 'Penandatangan', 'placeholder' => 'Terisi otomatis oleh sistem'],
-                    'pangkat_penandatangan' => ['label' => 'Pangkat / golongan', 'type' => 'text', 'required' => false, 'readonly' => true, 'source' => 'nota.kabid_pangkat', 'group' => 'Penandatangan', 'placeholder' => 'Terisi otomatis dari data akun jika tersedia'],
-                    'nip_penandatangan' => ['label' => 'NIP penandatangan', 'type' => 'text', 'required' => false, 'readonly' => true, 'source' => 'nota.kabid_nip', 'group' => 'Penandatangan', 'placeholder' => 'Terisi otomatis dari data akun jika tersedia'],
-                    'penandatangan' => ['label' => 'Ringkasan penandatangan', 'type' => 'text', 'required' => true, 'readonly' => true, 'source' => 'nota.kabid', 'group' => 'Penandatangan', 'placeholder' => 'Terisi otomatis oleh sistem'],
-                ],
+                'summary' => 'Mengikuti Template Nota Dinas IKK yang disediakan.',
+                'template_label' => 'Template Nota Dinas.docx',
+                'template_docx' => 'Template Nota Dinas.docx',
+                'template_note' => 'Template resmi nota dinas IKK: identitas nota, narasi laporan, tabel IKK utama, lampiran capaian deforestasi per UPTD KPH, total, dan tanda tangan Kabid.',
+                'fields' => $this->notaDinasFields(),
             ],
             'surat-undangan' => [
                 'title' => 'Surat Undangan Rapat',
@@ -137,6 +88,93 @@ class SuratTemplateService
                     'penandatangan' => ['label' => 'Penandatangan', 'type' => 'text', 'required' => true, 'placeholder' => 'Contoh: Drs. H. KOIMUDIN, S.H., M.M - Kepala Dinas'],
                 ],
             ],
+        ];
+    }
+
+    private function notaDinasFields(): array
+    {
+        return [
+            'kepada' => ['label' => 'Kepada Yth.', 'type' => 'text', 'required' => true, 'readonly' => true, 'source' => 'nota.kepada', 'group' => 'Identitas nota', 'placeholder' => 'Terisi otomatis oleh sistem'],
+            'tembusan' => ['label' => 'Tembusan', 'type' => 'text', 'required' => true, 'group' => 'Identitas nota', 'placeholder' => 'Contoh: Sekretaris u.b Kasubbag. Perencanaan, Evaluasi dan Pelaporan'],
+            'dari' => ['label' => 'Dari', 'type' => 'text', 'required' => true, 'readonly' => true, 'source' => 'nota.kabid_jabatan', 'group' => 'Identitas nota', 'placeholder' => 'Terisi otomatis dengan Kabid'],
+            'tanggal_nota' => ['label' => 'Tanggal nota', 'type' => 'date', 'required' => true, 'group' => 'Identitas nota'],
+            'nomor_nota' => ['label' => 'Nomor nota', 'type' => 'text', 'required' => true, 'readonly' => true, 'auto_calculated' => true, 'group' => 'Identitas nota', 'placeholder' => 'Terisi otomatis oleh sistem'],
+            'lampiran_text' => ['label' => 'Keterangan lampiran', 'type' => 'text', 'required' => true, 'group' => 'Identitas nota', 'placeholder' => 'Contoh: 1 (satu) berkas'],
+            'lampiran' => ['label' => 'Upload lampiran', 'type' => 'file', 'required' => false, 'accept' => '.pdf,.doc,.docx,.jpg,.jpeg,.png', 'group' => 'Identitas nota', 'placeholder' => 'Upload file lampiran nota dinas jika ada'],
+            'perihal_nota' => ['label' => 'Perihal', 'type' => 'text', 'required' => true, 'group' => 'Identitas nota', 'placeholder' => 'Contoh: Penyampaian Capaian Indikator Kinerja Kunci (IKK) Bulan Maret 2026'],
+            'nomor_rujukan' => ['label' => 'Nomor nota rujukan', 'type' => 'text', 'required' => true, 'group' => 'Narasi nota', 'placeholder' => 'Contoh: 000.7.2.8/126/ND.DISHUT/I/2026'],
+            'perihal_rujukan' => ['label' => 'Perihal rujukan', 'type' => 'text', 'required' => true, 'group' => 'Narasi nota', 'placeholder' => 'Contoh: Capaian Indikator Kinerja Kunci (IKK)'],
+            'bulan_laporan' => ['label' => 'Bulan laporan', 'type' => 'text', 'required' => true, 'group' => 'Narasi nota', 'placeholder' => 'Contoh: Maret'],
+            'tahun_laporan' => ['label' => 'Tahun laporan', 'type' => 'text', 'required' => true, 'group' => 'Narasi nota', 'placeholder' => 'Contoh: 2026'],
+            'bidang_pelapor' => ['label' => 'Bidang pelapor', 'type' => 'text', 'required' => true, 'readonly' => true, 'source' => 'nota.kabid_jabatan', 'group' => 'Narasi nota', 'placeholder' => 'Terisi otomatis dengan Kabid'],
+            'isi_nota' => ['label' => 'Paragraf pembuka laporan IKK', 'type' => 'textarea', 'required' => true, 'group' => 'Narasi nota', 'max' => 10000, 'placeholder' => 'Tuliskan paragraf pembuka sesuai kebutuhan laporan IKK.'],
+            'narasi_deforestasi' => ['label' => 'Narasi deforestasi', 'type' => 'textarea', 'required' => true, 'group' => 'Narasi nota', 'max' => 10000, 'placeholder' => 'Jelaskan sumber data, aktivitas ilegal, dan kondisi deforestasi bulan berjalan.'],
+            'narasi_keanekaragaman' => ['label' => 'Narasi pengelolaan / keanekaragaman', 'type' => 'textarea', 'required' => true, 'group' => 'Narasi nota', 'max' => 10000, 'placeholder' => 'Jelaskan capaian pengelolaan keanekaragaman hayati dan dukungan lintas bidang.'],
+            'narasi_penutup' => ['label' => 'Kalimat penutup', 'type' => 'textarea', 'required' => true, 'group' => 'Narasi nota', 'placeholder' => 'Contoh: Demikian disampaikan, atas perhatiannya diucapkan terima kasih.'],
+            'ikk_deforestasi_satuan' => ['label' => 'Deforestasi - satuan', 'type' => 'text', 'required' => true, 'group' => 'Tabel IKK utama', 'placeholder' => 'Contoh: %'],
+            'ikk_deforestasi_target' => ['label' => 'Deforestasi - target', 'type' => 'text', 'required' => true, 'group' => 'Tabel IKK utama', 'placeholder' => 'Contoh: 0,367'],
+            'ikk_deforestasi_capaian_bulan' => ['label' => 'Deforestasi - capaian bulan ini', 'type' => 'text', 'required' => true, 'group' => 'Tabel IKK utama', 'placeholder' => 'Contoh: 0,024'],
+            'ikk_deforestasi_capaian_sd' => ['label' => 'Deforestasi - capaian s.d bulan ini', 'type' => 'text', 'required' => true, 'group' => 'Tabel IKK utama', 'placeholder' => 'Contoh: 0,024'],
+            'ikk_deforestasi_keterangan' => ['label' => 'Deforestasi - keterangan', 'type' => 'textarea', 'required' => true, 'group' => 'Tabel IKK utama', 'placeholder' => 'Contoh: Rincian perhitungan terlampir.'],
+            'ikk_pengelolaan_satuan' => ['label' => 'Pengelolaan - satuan', 'type' => 'text', 'required' => true, 'group' => 'Tabel IKK utama', 'placeholder' => 'Contoh: Angka'],
+            'ikk_pengelolaan_target' => ['label' => 'Pengelolaan - target', 'type' => 'text', 'required' => true, 'group' => 'Tabel IKK utama', 'placeholder' => 'Contoh: 0,615'],
+            'ikk_pengelolaan_capaian_bulan' => ['label' => 'Pengelolaan - capaian bulan ini', 'type' => 'text', 'required' => true, 'group' => 'Tabel IKK utama', 'placeholder' => 'Contoh: 0'],
+            'ikk_pengelolaan_capaian_sd' => ['label' => 'Pengelolaan - capaian s.d bulan ini', 'type' => 'text', 'required' => true, 'group' => 'Tabel IKK utama', 'placeholder' => 'Contoh: 0'],
+            'ikk_pengelolaan_keterangan' => ['label' => 'Pengelolaan - keterangan', 'type' => 'textarea', 'required' => true, 'group' => 'Tabel IKK utama', 'placeholder' => 'Contoh: Pada periode pelaporan belum tersedia data dukung.'],
+            'ikk_keanekaragaman_satuan' => ['label' => 'Keanekaragaman - satuan', 'type' => 'text', 'required' => true, 'group' => 'Tabel IKK utama', 'placeholder' => 'Contoh: Angka'],
+            'ikk_keanekaragaman_target' => ['label' => 'Keanekaragaman - target', 'type' => 'text', 'required' => true, 'group' => 'Tabel IKK utama', 'placeholder' => 'Contoh: 3,092'],
+            'ikk_keanekaragaman_capaian_bulan' => ['label' => 'Keanekaragaman - capaian bulan ini', 'type' => 'text', 'required' => true, 'group' => 'Tabel IKK utama', 'placeholder' => 'Contoh: 3,092'],
+            'ikk_keanekaragaman_capaian_sd' => ['label' => 'Keanekaragaman - capaian s.d bulan ini', 'type' => 'text', 'required' => true, 'group' => 'Tabel IKK utama', 'placeholder' => 'Contoh: 3,092'],
+            'ikk_keanekaragaman_keterangan' => ['label' => 'Keanekaragaman - keterangan', 'type' => 'textarea', 'required' => true, 'group' => 'Tabel IKK utama', 'placeholder' => 'Contoh: Stabilitas nilai indeks dipertahankan secara konsisten.'],
+            ...$this->notaDinasKphFields(),
+            'kph_total_bobot' => ['label' => 'Total bobot', 'type' => 'text', 'required' => true, 'group' => 'Total tabel KPH', 'placeholder' => 'Contoh: 0,367'],
+            'kph_total_capaian_bulan' => ['label' => 'Total capaian bulan ini', 'type' => 'text', 'required' => true, 'group' => 'Total tabel KPH', 'placeholder' => 'Contoh: 0,024'],
+            'kph_total_capaian_sd' => ['label' => 'Total capaian s.d bulan ini', 'type' => 'text', 'required' => true, 'group' => 'Total tabel KPH', 'placeholder' => 'Contoh: 0,024'],
+            'keterangan_lampiran' => ['label' => 'Keterangan lampiran', 'type' => 'textarea', 'required' => true, 'group' => 'Total tabel KPH', 'placeholder' => 'Contoh: Rincian perhitungan indikator disajikan lengkap pada lampiran.'],
+            'tanggal_lampiran' => ['label' => 'Tanggal lampiran', 'type' => 'date', 'required' => true, 'group' => 'Penandatangan'],
+            'jabatan_penandatangan' => ['label' => 'Jabatan penandatangan', 'type' => 'text', 'required' => true, 'readonly' => true, 'source' => 'nota.kabid_jabatan', 'group' => 'Penandatangan', 'placeholder' => 'Terisi otomatis oleh sistem'],
+            'nama_penandatangan' => ['label' => 'Nama penandatangan', 'type' => 'text', 'required' => true, 'readonly' => true, 'source' => 'nota.kabid_nama', 'group' => 'Penandatangan', 'placeholder' => 'Terisi otomatis oleh sistem'],
+            'pangkat_penandatangan' => ['label' => 'Pangkat / golongan', 'type' => 'text', 'required' => true, 'readonly' => true, 'source' => 'nota.kabid_pangkat', 'group' => 'Penandatangan', 'placeholder' => 'Terisi otomatis dari data akun Kabid'],
+            'nip_penandatangan' => ['label' => 'NIP penandatangan', 'type' => 'text', 'required' => true, 'readonly' => true, 'source' => 'nota.kabid_nip', 'group' => 'Penandatangan', 'placeholder' => 'Terisi otomatis dari data akun Kabid'],
+            'penandatangan' => ['label' => 'Ringkasan penandatangan', 'type' => 'text', 'required' => true, 'readonly' => true, 'source' => 'nota.kabid', 'group' => 'Penandatangan', 'placeholder' => 'Terisi otomatis oleh sistem'],
+        ];
+    }
+
+    private function notaDinasKphFields(): array
+    {
+        $fields = [];
+
+        foreach ($this->notaDinasKphDefaults() as $index => $row) {
+            $number = $index + 1;
+            $prefix = 'kph_'.$number;
+            $group = 'Tabel KPH '.$number.'. '.$row['uptd'];
+
+            $fields[$prefix.'_bobot'] = ['label' => $row['uptd'].' - bobot', 'type' => 'text', 'required' => true, 'readonly' => true, 'auto_calculated' => true, 'default' => $row['bobot'], 'group' => $group, 'placeholder' => 'Terisi otomatis dari template'];
+            $fields[$prefix.'_capaian_bulan'] = ['label' => $row['uptd'].' - capaian bulan ini', 'type' => 'text', 'required' => true, 'group' => $group, 'placeholder' => 'Contoh: 0,000'];
+            $fields[$prefix.'_capaian_sd'] = ['label' => $row['uptd'].' - capaian s.d bulan ini', 'type' => 'text', 'required' => true, 'group' => $group, 'placeholder' => 'Contoh: 0,000'];
+            $fields[$prefix.'_keterangan'] = ['label' => $row['uptd'].' - keterangan', 'type' => 'textarea', 'required' => true, 'group' => $group, 'placeholder' => 'Isi "-" jika tidak ada keterangan.'];
+        }
+
+        return $fields;
+    }
+
+    private function notaDinasKphDefaults(): array
+    {
+        return [
+            ['uptd' => 'Meranti', 'bobot' => '0,026'],
+            ['uptd' => 'Lalan - Mendis', 'bobot' => '0,035'],
+            ['uptd' => 'Palembang-Banyuasin', 'bobot' => '0,044'],
+            ['uptd' => 'Sungai Lumpur - Riding', 'bobot' => '0,026'],
+            ['uptd' => 'Lempuing - Mesuji', 'bobot' => '0,017'],
+            ['uptd' => 'Bukit Nanti - Martapura', 'bobot' => '0,017'],
+            ['uptd' => 'Mekakau - Saka', 'bobot' => '0,026'],
+            ['uptd' => 'Semendo', 'bobot' => '0,010'],
+            ['uptd' => 'Suban Jeriji', 'bobot' => '0,035'],
+            ['uptd' => 'Dempo', 'bobot' => '0,009'],
+            ['uptd' => 'Kikim - Pasemah', 'bobot' => '0,017'],
+            ['uptd' => 'Benakat', 'bobot' => '0,026'],
+            ['uptd' => 'Lakitan - Bukit Cogong', 'bobot' => '0,044'],
+            ['uptd' => 'Rawas', 'bobot' => '0,035'],
         ];
     }
 
@@ -588,55 +626,96 @@ class SuratTemplateService
 
     private function makeNotaDinasDocx(PengajuanSurat $pengajuanSurat): string
     {
-        return $this->makeTemplateDocx($pengajuanSurat, 'nota-dinas', function (string $xml, array $data, PengajuanSurat $pengajuanSurat): string {
-            $bulan = $data['bulan_laporan'] ?? $this->monthNameFromDate($data['tanggal_nota'] ?? null);
-            $tahun = $data['tahun_laporan'] ?? date('Y', strtotime($data['tanggal_nota'] ?? date('Y-m-d')));
-            $bulanTahun = trim($bulan.' '.$tahun);
-            $notaTitle = $this->notaDinasTitle($data, $bulan, $tahun);
-            $tanggalNota = $this->formatIndonesianLongDate($data['tanggal_nota'] ?? null);
-            $tanggalLampiran = $this->formatIndonesianLongDate($data['tanggal_lampiran'] ?? $data['tanggal_nota'] ?? null);
-            $jabatanPenandatangan = $data['jabatan_penandatangan'] ?? $data['dari'] ?? '-';
-            $namaPenandatangan = $data['nama_penandatangan'] ?? $data['penandatangan'] ?? '-';
-            $nipPenandatangan = $data['nip_penandatangan'] ?? '-';
-            $pangkatPenandatangan = $data['pangkat_penandatangan'] ?? '-';
+        $pengajuanSurat->loadMissing(['digitalSignature.signer']);
 
-            $xml = $this->replaceWordText($xml, 'Kepala Dinas Kehutanan Provinsi Sumatera Selatan', $data['kepada'] ?? '-');
-            $xml = $this->replaceWordText($xml, 'Sekretaris u.b Kasubbag. Perencanaan, Evaluasi dan Pelaporan', $data['tembusan'] ?? '-');
-            $xml = $this->replaceWordText($xml, 'Kepala Bidang Perlindungan dan KSDAE', $data['dari'] ?? '-');
-            $xml = $this->replaceWordText($xml, 'Maret 2026', $tanggalNota, 1);
-            $xml = $this->replaceWordText($xml, '500.0.0.0/            /ND.DISHUT/I/2026', $data['nomor_nota'] ?? '-');
-            $xml = $this->replaceWordText($xml, '1 (satu) berkas', isset($data['lampiran']) ? '1 (satu) berkas' : '-');
-            $xml = $this->replaceWordText($xml, 'Penyampaian Capaian Indikator Kinerja Kunci (IKK) Bulan Februari 2026', $notaTitle);
-            $xml = $this->replaceWordText($xml, 'Menindaklanjuti Nota Dinas Kepala Dinas Kehutanan Nomor 000.7.2.8/126/ND. DISHUT/I/2026 perihal Capaian Indikator Kinerja Kunci (IKK) Bulan Februari Tahun 2026, bersama ini kami sampaikan laporan capaian IKK Bidang Perlindungan dan KSDAE sampai dengan Bulan Februari Tahun 2026. Berdasarkan hasil pengumpulan data dari masing-masing bidang teknis, capaian IKK Bulan Februari 2026 menunjukkan progres yang berjalan sesuai dengan target tahunan yang telah ditetapkan dalam dokumen perencanaan kinerja. Realisasi kinerja dihitung berdasarkan perbandingan antara target tahunan dengan capaian kumulatif sampai dengan bulan berjalan.', $data['isi_nota'] ?? '-');
-            $xml = $this->replaceWordText($xml, 'Pada Bidang Perlindungan dan KSDAE, kontribusi utama terhadap IKK berada pada indikator Persentase Kerusakan Hutan per Tahun (Deforestasi). Penghitungan indikator tersebut dilakukan berdasarkan analisis data yang bersumber dari aktivitas ilegal yang menyebabkan perubahan tutupan hutan, antara lain perambahan kawasan, kebakaran hutan dan lahan (karhutla), pertambangan tanpa izin (PETI), serta penebangan liar (illegal logging). Data dihimpun melalui kegiatan patroli pengamanan hutan, laporan UPTD KPH serta verifikasi dan analisis spasial.', $data['narasi_deforestasi'] ?? '-');
-            $xml = $this->replaceWordText($xml, 'Sementara itu, terhadap indikator Indeks Pengelolaan Keanekaragaman Hayati Daerah dan Indeks Keanekaragaman Hayati, peran yang dilaksanakan bersifat supporting kegiatan melalui pelaksanaan perlindungan habitat, penanganan interaksi negatif manusia dan satwa liar, penguatan kolaborasi dengan mitra kehutanan, serta pengumpulan data dukung sebagai bagian dari komponen penilaian indeks. Capaian kedua indikator tersebut bersifat lintas bidang dan terintegrasi dalam pelaksanaan program sustainable forest management. Adapun capaian masingmasing indikator sebagaimana tercantum dalam lampiran, yang merupakan bagian tidak terpisahkan dari nota dinas ini.', $data['narasi_keanekaragaman'] ?? '-');
-            $xml = $this->replaceWordText($xml, 'Demikian disampaikan, atas perhatiannya diucapkan terima kasih.', $data['narasi_penutup'] ?? 'Demikian disampaikan, atas perhatiannya diucapkan terima kasih.');
-            $xml = $this->replaceWordTextAll($xml, '000.7.2.8/126/ND. DISHUT/I/2026', $data['nomor_rujukan'] ?? '000.7.2.8/126/ND. DISHUT/I/2026');
-            $xml = $this->replaceWordTextAll($xml, 'Capaian Indikator Kinerja Kunci (IKK)', $data['perihal_rujukan'] ?? 'Capaian Indikator Kinerja Kunci (IKK)');
-            $xml = $this->replaceWordTextAll($xml, 'Bulan Februari 2026', 'Bulan '.$bulanTahun);
-            $xml = $this->replaceWordTextAll($xml, 'Bulan Februari Tahun 2026', 'Bulan '.$bulan.' Tahun '.$tahun);
-            $xml = $this->replaceWordTextAll($xml, 'Februari Tahun 2026', $bulan.' Tahun '.$tahun);
-            $xml = $this->replaceWordTextAll($xml, 'Februari 2026', $bulanTahun);
-            $xml = $this->replaceWordTextAll($xml, '03 Maret 2026', $tanggalLampiran);
-            $xml = $this->replaceWordTextAll($xml, '02 Maret 2026', $tanggalLampiran);
-            $xml = $this->replaceWordTextAll($xml, 'Kepala Bidang Perlindungan Dan KSDAE,', $jabatanPenandatangan.',');
-            $xml = $this->replaceWordTextAll($xml, 'Kepala Bidang Perlindungan dan KSDAE', $jabatanPenandatangan);
-            $xml = $this->replaceWordTextAll($xml, 'Bidang Perlindungan dan KSDAE', $data['bidang_pelapor'] ?? $jabatanPenandatangan);
-            if ($pengajuanSurat->digitalSignature) {
-                $namaPenandatangan = $this->digitalSignatureBlockText($pengajuanSurat);
-            }
+        return $this->makeNotaDinasStructuredDocx($pengajuanSurat, $pengajuanSurat->metadata['form_data'] ?? []);
+    }
 
-            $xml = $this->replaceWordTextAll($xml, 'Dr. SYAFRUL YUNARDY, S.Hut., M.E', $namaPenandatangan);
-            $xml = $this->replaceWordTextAll($xml, 'Dr. SYAFRUL YUNARDY, S.Hut.,M.E', $namaPenandatangan);
-            $xml = $this->replaceWordTextAll($xml, 'Pembina Utama Madya / IV.d', $pangkatPenandatangan);
-            $xml = $this->replaceWordTextAll($xml, 'Pembina Tk. I (IV/b)', $pangkatPenandatangan);
-            $xml = $this->replaceWordTextAll($xml, 'NIP. 19730619 200003 1 002', 'NIP. '.$nipPenandatangan);
-            $xml = $this->replaceWordTextAll($xml, 'NIP. 197306192000031002', 'NIP. '.$nipPenandatangan);
+    private function makeNotaDinasStructuredDocx(PengajuanSurat $pengajuanSurat, array $data): string
+    {
+        $bulan = $this->fieldValue($data, 'bulan_laporan');
+        $tahun = $this->fieldValue($data, 'tahun_laporan');
+        $bulanTahun = trim($bulan.' '.$tahun);
+        $tanggalNota = $this->formatIndonesianLongDate($data['tanggal_nota'] ?? null);
+        $tanggalLampiran = $this->formatIndonesianLongDate($data['tanggal_lampiran'] ?? $data['tanggal_nota'] ?? null);
+        $jabatanPenandatangan = $this->fieldValue($data, 'jabatan_penandatangan');
+        $namaPenandatangan = $pengajuanSurat->digitalSignature
+            ? $this->digitalSignatureBlockText($pengajuanSurat)
+            : $this->fieldValue($data, 'nama_penandatangan');
+        $pangkatPenandatangan = $this->fieldValue($data, 'pangkat_penandatangan');
+        $nipPenandatangan = $this->fieldValue($data, 'nip_penandatangan');
+        $title = $this->notaDinasTitle($data, $bulan, $tahun);
+        $body = '';
 
-            $xml = $this->fillNotaDinasTables($xml, $data);
+        $body .= $this->docxParagraph('PEMERINTAH PROVINSI SUMATERA SELATAN', ['align' => 'center', 'size' => 30]);
+        $body .= $this->docxParagraph('DINAS KEHUTANAN', ['align' => 'center', 'size' => 36, 'bold' => true]);
+        $body .= $this->docxParagraph('Jalan Kolonel H. Burlian Punti Kayu Km. 6,5 Palembang Provinsi Sumatera Selatan', ['align' => 'center', 'size' => 20]);
+        $body .= $this->docxParagraph('Telpon (0711) 410739, 411476 Fax. (0711) 411479, Kode Pos 30152', ['align' => 'center', 'size' => 20]);
+        $body .= $this->docxParagraph('Email: dishutprovsumslel@yahoo.co.id, Website: www.dishutsumsel.go.id', ['align' => 'center', 'size' => 20]);
+        $body .= $this->docxHorizontalRule();
+        $body .= $this->docxParagraph('NOTA DINAS', ['align' => 'center', 'size' => 24, 'bold' => true, 'underline' => true, 'before' => 180, 'after' => 180]);
+        $body .= $this->docxKeyValueTable([
+            ['Kepada Yth.', $this->fieldValue($data, 'kepada')],
+            ['Tembusan', $this->fieldValue($data, 'tembusan')],
+            ['Dari', $this->fieldValue($data, 'dari')],
+            ['Tanggal', $tanggalNota],
+            ['Nomor', $this->fieldValue($data, 'nomor_nota')],
+            ['Lampiran', $this->fieldValue($data, 'lampiran_text')],
+            ['Perihal', $title],
+        ]);
+        $body .= $this->docxHorizontalRule();
+        $body .= $this->docxParagraph($this->fieldValue($data, 'isi_nota'), ['align' => 'both', 'firstLine' => 720, 'before' => 220]);
+        $body .= $this->docxParagraph($this->fieldValue($data, 'narasi_deforestasi'), ['align' => 'both', 'firstLine' => 720]);
+        $body .= $this->docxParagraph($this->fieldValue($data, 'narasi_keanekaragaman'), ['align' => 'both', 'firstLine' => 720]);
+        $body .= $this->docxParagraph($this->fieldValue($data, 'narasi_penutup'), ['align' => 'both', 'firstLine' => 720, 'before' => 220]);
+        $body .= $this->docxSignatureBlock($tanggalLampiran, $jabatanPenandatangan, $namaPenandatangan, $pangkatPenandatangan, $nipPenandatangan);
+        $body .= $this->docxPageBreak();
 
-            return $xml;
-        });
+        $body .= $this->docxParagraph('CAPAIAN INDIKATOR KINERJA KUNCI (IKK)', ['align' => 'center', 'size' => 24, 'bold' => false]);
+        $body .= $this->docxParagraph('BIDANG PERLINDUNGAN HUTAN DAN KSDAE', ['align' => 'center', 'size' => 22]);
+        $body .= $this->docxParagraph('DINAS KEHUTANAN PROVINSI SUMATERA SELATAN', ['align' => 'center', 'size' => 22]);
+        $body .= $this->docxParagraph('BULAN '.strtoupper($bulanTahun), ['align' => 'center', 'size' => 22, 'bold' => true, 'after' => 260]);
+        $body .= $this->docxTable([
+            ['No', 'Indikator', 'Satuan', 'Target', 'Capaian Bulan Ini', 'Capaian s.d Bulan Ini', 'Keterangan'],
+            ['1', 'Persentase kerusakan hutan pertahun (deforestasi)', $this->fieldValue($data, 'ikk_deforestasi_satuan'), $this->fieldValue($data, 'ikk_deforestasi_target'), $this->fieldValue($data, 'ikk_deforestasi_capaian_bulan'), $this->fieldValue($data, 'ikk_deforestasi_capaian_sd'), $this->fieldValue($data, 'ikk_deforestasi_keterangan')],
+            ['2', 'Indeks Pengelolaan Keanekaragaman Hayati Daerah', $this->fieldValue($data, 'ikk_pengelolaan_satuan'), $this->fieldValue($data, 'ikk_pengelolaan_target'), $this->fieldValue($data, 'ikk_pengelolaan_capaian_bulan'), $this->fieldValue($data, 'ikk_pengelolaan_capaian_sd'), $this->fieldValue($data, 'ikk_pengelolaan_keterangan')],
+            ['3', 'Indeks Keanekaragaman Hayati', $this->fieldValue($data, 'ikk_keanekaragaman_satuan'), $this->fieldValue($data, 'ikk_keanekaragaman_target'), $this->fieldValue($data, 'ikk_keanekaragaman_capaian_bulan'), $this->fieldValue($data, 'ikk_keanekaragaman_capaian_sd'), $this->fieldValue($data, 'ikk_keanekaragaman_keterangan')],
+        ], [600, 3100, 900, 1000, 1250, 1450, 2900]);
+        $body .= $this->docxSignatureBlock($tanggalLampiran, $jabatanPenandatangan, $namaPenandatangan, $pangkatPenandatangan, $nipPenandatangan);
+        $body .= $this->docxPageBreak();
+
+        $body .= $this->docxParagraph('CAPAIAN INDIKATOR KINERJA KUNCI (IKK)', ['align' => 'center', 'size' => 22]);
+        $body .= $this->docxParagraph('BIDANG PERLINDUNGAN HUTAN DAN KSDAE PADA UPTD KPH WILAYAH I-XIV', ['align' => 'center', 'size' => 22]);
+        $body .= $this->docxParagraph('BULAN '.strtoupper($bulanTahun), ['align' => 'center', 'size' => 22, 'bold' => true, 'after' => 220]);
+        $body .= $this->docxKeyValueTable([
+            ['Bidang', $this->fieldValue($data, 'bidang_pelapor')],
+            ['Indikator Kinerja', 'Persentase Kerusakan Hutan pertahun (Deforestasi)'],
+            ['Target', $this->fieldValue($data, 'ikk_deforestasi_target')],
+        ], false);
+        $kphRows = [
+            ['No', 'UPTD KPH', 'Bobot', 'Capaian Bulan Ini', 'Capaian s.d Bulan Ini', 'Keterangan'],
+        ];
+
+        foreach ($this->notaDinasKphDefaults() as $index => $row) {
+            $number = $index + 1;
+            $prefix = 'kph_'.$number;
+            $kphRows[] = [
+                (string) $number,
+                $row['uptd'],
+                $this->fieldValue($data, $prefix.'_bobot'),
+                $this->fieldValue($data, $prefix.'_capaian_bulan'),
+                $this->fieldValue($data, $prefix.'_capaian_sd'),
+                $this->fieldValue($data, $prefix.'_keterangan'),
+            ];
+        }
+
+        $kphRows[] = ['Total', '', $this->fieldValue($data, 'kph_total_bobot'), $this->fieldValue($data, 'kph_total_capaian_bulan'), $this->fieldValue($data, 'kph_total_capaian_sd'), ''];
+        $body .= $this->docxTable($kphRows, [550, 3000, 1200, 1500, 1650, 2900]);
+        $body .= $this->docxParagraph('Keterangan:', ['bold' => false, 'before' => 120]);
+        $body .= $this->docxParagraph($this->fieldValue($data, 'keterangan_lampiran'), ['align' => 'both']);
+        $body .= $this->docxSignatureBlock($tanggalLampiran, $jabatanPenandatangan, $namaPenandatangan, $pangkatPenandatangan, $nipPenandatangan);
+
+        return $this->makeDocxDocument($body);
     }
 
     private function makeSuratUndanganDocx(PengajuanSurat $pengajuanSurat): string
@@ -1122,6 +1201,129 @@ class SuratTemplateService
         }
 
         return $bars;
+    }
+
+    private function makeDocxDocument(string $body): string
+    {
+        $temp = tempnam(sys_get_temp_dir(), 'docx');
+        $zip = new ZipArchive;
+        $zip->open($temp, ZipArchive::OVERWRITE);
+        $zip->addFromString('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
+        $zip->addFromString('_rels/.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
+        $zip->addFromString('word/document.xml', '<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'.$body.'<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="900" w:right="900" w:bottom="900" w:left="900"/></w:sectPr></w:body></w:document>');
+        $zip->close();
+
+        $content = file_get_contents($temp) ?: '';
+        @unlink($temp);
+
+        return $content;
+    }
+
+    private function docxParagraph(string $text, array $options = []): string
+    {
+        $align = $options['align'] ?? 'left';
+        $size = (int) ($options['size'] ?? 22);
+        $bold = ! empty($options['bold']) ? '<w:b/>' : '';
+        $underline = ! empty($options['underline']) ? '<w:u w:val="single"/>' : '';
+        $before = (int) ($options['before'] ?? 0);
+        $after = (int) ($options['after'] ?? 120);
+        $firstLine = isset($options['firstLine']) ? '<w:ind w:firstLine="'.((int) $options['firstLine']).'"/>' : '';
+        $runs = $this->docxRuns($text, '<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>'.$bold.$underline.'<w:sz w:val="'.$size.'"/>');
+
+        return '<w:p><w:pPr><w:jc w:val="'.$align.'"/><w:spacing w:before="'.$before.'" w:after="'.$after.'" w:line="276" w:lineRule="auto"/>'.$firstLine.'</w:pPr>'.$runs.'</w:p>';
+    }
+
+    private function docxHorizontalRule(): string
+    {
+        return '<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="12" w:space="1" w:color="000000"/></w:pBdr><w:spacing w:after="80"/></w:pPr></w:p>';
+    }
+
+    private function docxPageBreak(): string
+    {
+        return '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+    }
+
+    private function docxKeyValueTable(array $rows, bool $fullWidth = true): string
+    {
+        $widths = $fullWidth ? [1700, 250, 8200] : [1800, 250, 5000];
+        $tableRows = collect($rows)
+            ->map(fn (array $row): string => '<w:tr>'.$this->docxCell($row[0] ?? '-', $widths[0], ['borderless' => true]).$this->docxCell(':', $widths[1], ['borderless' => true, 'align' => 'center']).$this->docxCell($row[1] ?? '-', $widths[2], ['borderless' => true]).'</w:tr>')
+            ->implode('');
+
+        return '<w:tbl><w:tblPr><w:tblW w:w="'.array_sum($widths).'" w:type="dxa"/><w:tblCellMar><w:top w:w="40" w:type="dxa"/><w:left w:w="60" w:type="dxa"/><w:bottom w:w="40" w:type="dxa"/><w:right w:w="60" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>'.$this->docxGrid($widths).'</w:tblGrid>'.$tableRows.'</w:tbl>';
+    }
+
+    private function docxTable(array $rows, array $widths): string
+    {
+        $tableRows = '';
+
+        foreach ($rows as $rowIndex => $row) {
+            $cells = '';
+
+            foreach ($widths as $cellIndex => $width) {
+                $cells .= $this->docxCell($row[$cellIndex] ?? '', $width, [
+                    'header' => $rowIndex === 0,
+                    'bold' => $rowIndex === 0 || (($row[0] ?? '') === 'Total'),
+                    'align' => in_array($cellIndex, [0, 2, 3, 4], true) ? 'center' : 'left',
+                    'shade' => $rowIndex === 0 || (($row[0] ?? '') === 'Total'),
+                ]);
+            }
+
+            $tableRows .= '<w:tr>'.$cells.'</w:tr>';
+        }
+
+        return '<w:tbl><w:tblPr><w:tblW w:w="'.array_sum($widths).'" w:type="dxa"/><w:tblBorders><w:top w:val="single" w:sz="6" w:color="000000"/><w:left w:val="single" w:sz="6" w:color="000000"/><w:bottom w:val="single" w:sz="6" w:color="000000"/><w:right w:val="single" w:sz="6" w:color="000000"/><w:insideH w:val="single" w:sz="6" w:color="000000"/><w:insideV w:val="single" w:sz="6" w:color="000000"/></w:tblBorders><w:tblCellMar><w:top w:w="70" w:type="dxa"/><w:left w:w="80" w:type="dxa"/><w:bottom w:w="70" w:type="dxa"/><w:right w:w="80" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>'.$this->docxGrid($widths).'</w:tblGrid>'.$tableRows.'</w:tbl>';
+    }
+
+    private function docxCell(string $text, int $width, array $options = []): string
+    {
+        $borderless = ! empty($options['borderless'])
+            ? '<w:tcBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/></w:tcBorders>'
+            : '';
+        $shade = ! empty($options['shade']) ? '<w:shd w:fill="0F2942"/>' : '';
+        $align = $options['align'] ?? 'left';
+        $bold = ! empty($options['bold']) ? '<w:b/>' : '';
+        $color = ! empty($options['shade']) ? '<w:color w:val="FFFFFF"/>' : '';
+        $runs = $this->docxRuns($text, '<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>'.$bold.$color.'<w:sz w:val="20"/>');
+
+        return '<w:tc><w:tcPr><w:tcW w:w="'.$width.'" w:type="dxa"/>'.$borderless.$shade.'</w:tcPr><w:p><w:pPr><w:jc w:val="'.$align.'"/><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr>'.$runs.'</w:p></w:tc>';
+    }
+
+    private function docxGrid(array $widths): string
+    {
+        return collect($widths)
+            ->map(fn (int $width): string => '<w:gridCol w:w="'.$width.'"/>')
+            ->implode('');
+    }
+
+    private function docxSignatureBlock(string $tanggal, string $jabatan, string $nama, string $pangkat, string $nip): string
+    {
+        return $this->docxParagraph('Palembang, '.$tanggal, ['align' => 'right', 'before' => 360, 'after' => 0])
+            .$this->docxParagraph($jabatan, ['align' => 'right', 'after' => 650])
+            .$this->docxParagraph($nama, ['align' => 'right', 'bold' => true, 'after' => 0])
+            .$this->docxParagraph($pangkat, ['align' => 'right', 'after' => 0])
+            .$this->docxParagraph('NIP. '.$nip, ['align' => 'right', 'after' => 0]);
+    }
+
+    private function xmlText(string $value): string
+    {
+        return htmlspecialchars($value, ENT_XML1 | ENT_COMPAT, 'UTF-8');
+    }
+
+    private function docxRuns(string $text, string $runProperties): string
+    {
+        $lines = preg_split('/\R/', $text) ?: [''];
+        $runs = '';
+
+        foreach ($lines as $index => $line) {
+            if ($index > 0) {
+                $runs .= '<w:r><w:br/></w:r>';
+            }
+
+            $runs .= '<w:r><w:rPr>'.$runProperties.'</w:rPr><w:t xml:space="preserve">'.$this->xmlText($line).'</w:t></w:r>';
+        }
+
+        return $runs;
     }
 
     private function makeSimpleDocx(array $lines): string

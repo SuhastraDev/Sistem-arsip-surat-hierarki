@@ -317,10 +317,22 @@ class PengajuanSuratController extends Controller
         $fields['jabatan_penandatangan'] = $kabidProfile['jabatan'];
         $fields['nip_penandatangan'] = $kabidProfile['nip'];
         $fields['pangkat_penandatangan'] = $kabidProfile['pangkat'];
+        $fields['dari'] = $kabidProfile['jabatan'];
 
         $fields['bulan_laporan'] = $fields['bulan_laporan'] ?? $this->monthNameFromDate($fields['tanggal_nota'] ?? now()->toDateString());
         $fields['tahun_laporan'] = $fields['tahun_laporan'] ?? date('Y', strtotime($fields['tanggal_nota'] ?? now()->toDateString()));
-        $fields['bidang_pelapor'] = $fields['bidang_pelapor'] ?? $fields['dari'] ?? $kabidProfile['jabatan'];
+        $fields['bidang_pelapor'] = $kabidProfile['jabatan'];
+        $fields['lampiran_text'] = $fields['lampiran_text'] ?? '1 (satu) berkas';
+
+        foreach ($this->templateService->fields($slug) as $key => $field) {
+            if (! array_key_exists('default', $field)) {
+                continue;
+            }
+
+            if (! isset($fields[$key]) || trim((string) $fields[$key]) === '') {
+                $fields[$key] = $field['default'];
+            }
+        }
 
         return $fields;
     }

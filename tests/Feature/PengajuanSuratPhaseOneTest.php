@@ -51,6 +51,70 @@ class PengajuanSuratPhaseOneTest extends TestCase
         return $documentXml ?: '';
     }
 
+    private function notaDinasFormFields(array $overrides = []): array
+    {
+        $fields = [
+            'tembusan' => 'Sekretaris u.b Kasubbag. Perencanaan, Evaluasi dan Pelaporan',
+            'tanggal_nota' => '2026-07-24',
+            'lampiran_text' => '1 (satu) berkas',
+            'perihal_nota' => 'Koordinasi internal',
+            'nomor_rujukan' => '000.7.2.8/999/ND.DISHUT/I/2026',
+            'perihal_rujukan' => 'Capaian IKK Custom',
+            'bulan_laporan' => 'Juli',
+            'tahun_laporan' => '2026',
+            'isi_nota' => 'Permohonan koordinasi tindak lanjut kegiatan.',
+            'narasi_deforestasi' => 'Narasi deforestasi custom dari form.',
+            'narasi_keanekaragaman' => 'Narasi pengelolaan keanekaragaman custom.',
+            'narasi_penutup' => 'Penutup custom nota dinas.',
+            'ikk_deforestasi_satuan' => '%',
+            'ikk_deforestasi_target' => '0,111',
+            'ikk_deforestasi_capaian_bulan' => '1,22',
+            'ikk_deforestasi_capaian_sd' => '2,33',
+            'ikk_deforestasi_keterangan' => 'Keterangan deforestasi custom',
+            'ikk_pengelolaan_satuan' => 'Angka',
+            'ikk_pengelolaan_target' => '0,222',
+            'ikk_pengelolaan_capaian_bulan' => '3,44',
+            'ikk_pengelolaan_capaian_sd' => '4,55',
+            'ikk_pengelolaan_keterangan' => 'Keterangan pengelolaan custom',
+            'ikk_keanekaragaman_satuan' => 'Angka',
+            'ikk_keanekaragaman_target' => '0,333',
+            'ikk_keanekaragaman_capaian_bulan' => '5,66',
+            'ikk_keanekaragaman_capaian_sd' => '6,77',
+            'ikk_keanekaragaman_keterangan' => 'Keterangan keanekaragaman custom',
+            'kph_total_bobot' => '0,367',
+            'kph_total_capaian_bulan' => '7,88',
+            'kph_total_capaian_sd' => '8,99',
+            'keterangan_lampiran' => 'Keterangan lampiran deforestasi custom.',
+            'tanggal_lampiran' => '2026-07-25',
+        ];
+
+        $kphNames = [
+            'Meranti',
+            'Lalan - Mendis',
+            'Palembang-Banyuasin',
+            'Sungai Lumpur - Riding',
+            'Lempuing - Mesuji',
+            'Bukit Nanti - Martapura',
+            'Mekakau - Saka',
+            'Semendo',
+            'Suban Jeriji',
+            'Dempo',
+            'Kikim - Pasemah',
+            'Benakat',
+            'Lakitan - Bukit Cogong',
+            'Rawas',
+        ];
+
+        foreach ($kphNames as $index => $name) {
+            $number = $index + 1;
+            $fields['kph_'.$number.'_capaian_bulan'] = $number === 1 ? '9,99' : '0,000';
+            $fields['kph_'.$number.'_capaian_sd'] = $number === 1 ? '8,88' : '0,000';
+            $fields['kph_'.$number.'_keterangan'] = $number === 1 ? $name.' custom' : '-';
+        }
+
+        return array_replace($fields, $overrides);
+    }
+
     public function test_admin_can_open_master_jenis_surat_with_seeded_types(): void
     {
         $this->seed();
@@ -532,49 +596,9 @@ class PengajuanSuratPhaseOneTest extends TestCase
                 'jenis_surat_id' => $jenisSurat->id,
                 'tanggal_pengajuan' => '2026-07-24',
                 'perihal' => 'Nota dinas koordinasi internal',
-                'fields' => [
-                    'tembusan' => 'Sekretaris u.b Kasubbag. Perencanaan, Evaluasi dan Pelaporan',
-                    'dari' => 'Kepala Bidang Perlindungan dan KSDAE',
-                    'tanggal_nota' => '2026-07-24',
+                'fields' => $this->notaDinasFormFields([
                     'lampiran' => UploadedFile::fake()->create('lampiran-nota.pdf', 100, 'application/pdf'),
-                    'perihal_nota' => 'Koordinasi internal',
-                    'nomor_rujukan' => '000.7.2.8/999/ND.DISHUT/I/2026',
-                    'perihal_rujukan' => 'Capaian IKK Custom',
-                    'bulan_laporan' => 'Juli',
-                    'tahun_laporan' => '2026',
-                    'bidang_pelapor' => 'Bidang Perlindungan dan KSDAE',
-                    'isi_nota' => 'Permohonan koordinasi tindak lanjut kegiatan.',
-                    'narasi_deforestasi' => 'Narasi deforestasi custom dari form.',
-                    'narasi_keanekaragaman' => 'Narasi pengelolaan keanekaragaman custom.',
-                    'narasi_penutup' => 'Penutup custom nota dinas.',
-                    'ikk_deforestasi_target' => '0,111',
-                    'ikk_deforestasi_capaian_bulan' => '1,22',
-                    'ikk_deforestasi_capaian_sd' => '2,33',
-                    'ikk_deforestasi_keterangan' => 'Keterangan deforestasi custom',
-                    'ikk_pengelolaan_target' => '0,222',
-                    'ikk_pengelolaan_capaian_bulan' => '3,44',
-                    'ikk_pengelolaan_capaian_sd' => '4,55',
-                    'ikk_pengelolaan_keterangan' => 'Keterangan pengelolaan custom',
-                    'ikk_keanekaragaman_target' => '0,333',
-                    'ikk_keanekaragaman_capaian_bulan' => '5,66',
-                    'ikk_keanekaragaman_capaian_sd' => '6,77',
-                    'ikk_keanekaragaman_keterangan' => 'Keterangan keanekaragaman custom',
-                    'kph_capaian' => 'Meranti Custom | 9,99 | 8,88 | 7,77 | KPH custom',
-                    'deforestasi_rincian' => 'Meranti Deforestasi | A | B | C | D | 123 ha | 0,456 | Lokasi custom',
-                    'rekap_deforestasi_target' => '0,444',
-                    'rekap_deforestasi_capaian_bulan' => '7,88',
-                    'rekap_deforestasi_capaian_sd' => '8,99',
-                    'rekap_deforestasi_keterangan' => 'Rekap deforestasi custom',
-                    'rekap_pengelolaan_target' => '0,555',
-                    'rekap_pengelolaan_capaian_bulan' => '9,11',
-                    'rekap_pengelolaan_capaian_sd' => '10,22',
-                    'rekap_pengelolaan_keterangan' => 'Rekap pengelolaan custom',
-                    'rekap_keanekaragaman_target' => '0,666',
-                    'rekap_keanekaragaman_capaian_bulan' => '11,33',
-                    'rekap_keanekaragaman_capaian_sd' => '12,44',
-                    'rekap_keanekaragaman_keterangan' => 'Rekap keanekaragaman custom',
-                    'tanggal_lampiran' => '2026-07-25',
-                ],
+                ]),
             ]);
 
         $pengajuan = PengajuanSurat::firstOrFail();
@@ -610,9 +634,9 @@ class PengajuanSuratPhaseOneTest extends TestCase
         $this->assertStringContainsString('Permohonan koordinasi tindak lanjut kegiatan.', $documentXml);
         $this->assertTrue(str_contains($documentXml, 'Narasi deforestasi custom dari form.'), 'DOCX memuat narasi deforestasi Nota Dinas.');
         $this->assertTrue(str_contains($documentXml, 'Keterangan deforestasi custom'), 'DOCX memuat keterangan IKK deforestasi.');
-        $this->assertTrue(str_contains($documentXml, 'Meranti Custom'), 'DOCX memuat baris lampiran KPH capaian.');
-        $this->assertTrue(str_contains($documentXml, 'Meranti Deforestasi'), 'DOCX memuat baris lampiran deforestasi.');
-        $this->assertTrue(str_contains($documentXml, 'Rekap keanekaragaman custom'), 'DOCX memuat rekap lampiran keanekaragaman.');
+        $this->assertTrue(str_contains($documentXml, 'Meranti'), 'DOCX memuat baris lampiran KPH.');
+        $this->assertTrue(str_contains($documentXml, 'Meranti custom'), 'DOCX memuat keterangan KPH dari form.');
+        $this->assertTrue(str_contains($documentXml, 'Keterangan lampiran deforestasi custom.'), 'DOCX memuat keterangan lampiran.');
         $this->assertStringNotContainsString('Sistem E-Arsip Surat Digital', $documentXml);
     }
 
@@ -658,23 +682,16 @@ class PengajuanSuratPhaseOneTest extends TestCase
                 'kewajiban_laporan' => 'Melakukan pemantauan',
                 'penandatangan' => $kabid->name,
             ],
-            'nota-dinas' => [
+            'nota-dinas' => $this->notaDinasFormFields([
                 'kepada' => 'Kepala Dinas Kehutanan Provinsi Sumatera Selatan',
-                'tembusan' => '-',
-                'dari' => 'Kepala Bidang Perlindungan dan KSDAE',
-                'tanggal_nota' => '2026-07-25',
+                'dari' => $kabid->jabatan,
                 'nomor_nota' => '500.0.0.0/001/ND.DISHUT/I/2026',
-                'perihal_nota' => 'Penyampaian Capaian Indikator Kinerja Kunci (IKK) Bulan Februari 2026',
-                'bulan_laporan' => 'Juli',
-                'tahun_laporan' => '2026',
-                'bidang_pelapor' => 'Bidang Perlindungan dan KSDAE',
-                'isi_nota' => 'Isi nota dinas.',
                 'nama_penandatangan' => $kabid->name,
                 'jabatan_penandatangan' => $kabid->jabatan,
                 'nip_penandatangan' => $kabid->nip,
                 'pangkat_penandatangan' => '-',
                 'penandatangan' => $kabid->name,
-            ],
+            ]),
             'surat-undangan' => [
                 'nomor_surat' => '500.4.6.4/3508/Dishut.III/2026',
                 'sifat' => 'Biasa',
@@ -784,18 +801,13 @@ class PengajuanSuratPhaseOneTest extends TestCase
                 'jenis_surat_id' => $jenisSurat->id,
                 'tanggal_pengajuan' => '2026-08-12',
                 'perihal' => 'Nota dinas otomatis',
-                'fields' => [
+                'fields' => $this->notaDinasFormFields([
                     'kepada' => 'Input manual tidak boleh dipakai',
-                    'tembusan' => '-',
                     'dari' => 'Bidang Perlindungan dan KSDAE',
-                    'tanggal_nota' => '2026-08-12',
                     'nomor_nota' => 'NOMOR PALSU',
                     'lampiran' => UploadedFile::fake()->create('lampiran-manual.pdf', 80, 'application/pdf'),
-                    'perihal_nota' => 'Koordinasi',
-                    'isi_nota' => 'Isi nota dinas.',
-                    'rincian_lampiran' => '-',
                     'penandatangan' => 'Penandatangan palsu',
-                ],
+                ]),
             ])
             ->assertRedirect(route('pengajuan-surat.index'));
 
