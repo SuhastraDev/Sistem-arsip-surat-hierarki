@@ -4,47 +4,126 @@
 
 @section('content')
 @php
-$steps = [
+$trackingStyles = [
     'diajukan' => [
         'label' => 'Diajukan',
         'owner' => 'Staff',
         'description' => 'Pengajuan dibuat dan masuk ke antrean pemeriksaan.',
         'icon' => 'fas fa-paper-plane',
+        'tone' => 'info',
     ],
-    'diperiksa_kasi' => [
-        'label' => 'Diperiksa Kasi',
+    'periksa_kasi' => [
+        'label' => 'Mulai Diperiksa Kasi',
         'owner' => 'Kasi',
         'description' => 'Kasi memeriksa kelengkapan dan isi pengajuan.',
         'icon' => 'fas fa-user-check',
+        'tone' => 'info',
     ],
-    'disetujui_kasi' => [
+    'acc_kasi' => [
         'label' => 'Disetujui Kasi',
         'owner' => 'Kasi',
-        'description' => 'Pengajuan lolos pemeriksaan Kasi.',
+        'description' => 'Pengajuan lolos pemeriksaan Kasi dan diteruskan ke Kabid.',
         'icon' => 'fas fa-check',
+        'tone' => 'success',
     ],
-    'diperiksa_kabid' => [
-        'label' => 'Diperiksa Kabid',
+    'periksa_kabid' => [
+        'label' => 'Mulai Diperiksa Kabid',
         'owner' => 'Kabid',
         'description' => 'Kabid melakukan pemeriksaan akhir.',
         'icon' => 'fas fa-user-tie',
+        'tone' => 'info',
     ],
-    'disetujui_kabid' => [
+    'acc_kabid' => [
         'label' => 'Disetujui Kabid',
         'owner' => 'Kabid',
         'description' => 'Pengajuan disetujui final sebelum tanda tangan.',
         'icon' => 'fas fa-stamp',
+        'tone' => 'success',
     ],
-    'selesai' => [
-        'label' => 'TTD & Kembali ke Staff',
+    'revisi' => [
+        'label' => 'Perlu Revisi',
+        'owner' => 'Reviewer',
+        'description' => 'Pengajuan dikembalikan ke Staff. Staff dapat memperbaiki lalu klik Ajukan Ulang.',
+        'icon' => 'fas fa-rotate-left',
+        'tone' => 'warning',
+    ],
+    'ajukan_ulang' => [
+        'label' => 'Diajukan Ulang',
+        'owner' => 'Staff',
+        'description' => 'Revisi dikirim ulang ke Kasi untuk pemeriksaan berikutnya.',
+        'icon' => 'fas fa-paper-plane',
+        'tone' => 'info',
+    ],
+    'ditolak' => [
+        'label' => 'Ditolak',
+        'owner' => 'Reviewer',
+        'description' => 'Pengajuan ditolak. Alur berhenti dan tidak dapat diajukan ulang dari pengajuan ini.',
+        'icon' => 'fas fa-ban',
+        'tone' => 'danger',
+    ],
+    'tandatangan_kabid' => [
+        'label' => 'Final Kembali ke Staff',
         'owner' => 'Kabid',
         'description' => 'Kabid menandatangani dokumen, sistem memasukkan QR/kode verifikasi, lalu hasil kembali ke Staff pemohon.',
         'icon' => 'fas fa-qrcode',
+        'tone' => 'success',
     ],
 ];
-$keys = array_keys($steps);
-$currentIndex = array_search($pengajuanSurat->status, $keys, true);
-$currentIndex = $currentIndex === false ? 0 : $currentIndex;
+$riwayatTimeline = $pengajuanSurat->riwayat->sortBy('created_at')->values();
+$lastHistory = $riwayatTimeline->last();
+$trackingItems = $riwayatTimeline->map(function ($riwayat) use ($trackingStyles, $pengajuanSurat, $lastHistory) {
+    $style = $trackingStyles[$riwayat->aksi] ?? [
+        'label' => str_replace('_', ' ', ucfirst($riwayat->aksi)),
+        'owner' => ucfirst($riwayat->metadata['actor_role'] ?? $riwayat->actor?->role ?? 'Sistem'),
+        'description' => 'Aktivitas pengajuan tercatat pada riwayat.',
+        'icon' => 'fas fa-circle-dot',
+        'tone' => 'info',
+    ];
+    $isLastMatchingCurrent = $lastHistory?->id === $riwayat->id && $pengajuanSurat->status === $riwayat->status_sesudah;
+    $state = 'done';
+
+    if ($riwayat->aksi === 'ditolak') {
+        $state = 'rejected';
+    } elseif ($riwayat->aksi === 'revisi' && $pengajuanSurat->status === 'draft' && $isLastMatchingCurrent) {
+        $state = 'revision';
+    } elseif ($isLastMatchingCurrent && ! in_array($pengajuanSurat->status, ['selesai'], true)) {
+        $state = 'current';
+    }
+
+    return [
+        'style' => $style,
+        'state' => $state,
+        'riwayat' => $riwayat,
+    ];
+});
+
+if ($pengajuanSurat->status === 'disetujui_kabid' && ! $pengajuanSurat->digitalSignature) {
+    $trackingItems->push([
+        'style' => [
+            'label' => 'Menunggu TTD Kabid',
+            'owner' => 'Kabid',
+            'description' => 'Kabid perlu menekan tombol tanda tangan agar dokumen final kembali ke Staff.',
+            'icon' => 'fas fa-pen-nib',
+            'tone' => 'warning',
+        ],
+        'state' => 'current',
+        'riwayat' => null,
+    ]);
+}
+
+if ($trackingItems->isEmpty()) {
+    $trackingItems->push([
+        'style' => [
+            'label' => 'Belum Ada Riwayat',
+            'owner' => 'Sistem',
+            'description' => 'Pengajuan belum memiliki aktivitas tercatat.',
+            'icon' => 'fas fa-clock',
+            'tone' => 'info',
+        ],
+        'state' => 'current',
+        'riwayat' => null,
+    ]);
+}
 @endphp
 @php
 $verificationCode = $pengajuanSurat->digitalSignature?->verification_code;
@@ -61,6 +140,18 @@ $verificationUrl = $verificationCode ? route('verification.show', $verificationC
 <div class="alert alert-success">
     <strong>Dokumen final sudah kembali ke Staff pemohon.</strong>
     Barcode/QR verifikasi sudah ditempatkan di area TTD. PDF final membawa barcode verifikasi, DOCX membawa kode verifikasi.
+</div>
+@endif
+@if($pengajuanSurat->status === 'draft')
+<div class="alert alert-warning">
+    <strong>Pengajuan perlu revisi.</strong>
+    Staff pemohon dapat memperbaiki data/lampiran yang diminta, lalu klik <strong>Ajukan Ulang</strong> agar kembali ke meja Kasi.
+</div>
+@endif
+@if($pengajuanSurat->status === 'ditolak')
+<div class="alert alert-danger">
+    <strong>Pengajuan ditolak.</strong>
+    Alur pengajuan ini sudah berhenti. Catatan penolakan dapat dilihat pada tracking dan riwayat aktivitas.
 </div>
 @endif
 @if(Auth::user()->role === 'kabid' && $pengajuanSurat->status === 'disetujui_kabid' && ! $pengajuanSurat->digitalSignature)
@@ -290,22 +381,16 @@ $verificationUrl = $verificationCode ? route('verification.show', $verificationC
 
         <div class="detail-panel">
             <div class="detail-panel-header">
-                <strong><i class="fas fa-route me-2 text-primary"></i>Roadmap Pengajuan</strong>
-                <div class="small text-muted mt-1">Alur kerja dari staff sampai dokumen final siap diverifikasi.</div>
+                <strong><i class="fas fa-route me-2 text-primary"></i>Tracking Pengajuan</strong>
+                <div class="small text-muted mt-1">Mengikuti kondisi sebenarnya: revisi bisa diajukan ulang, ditolak berhenti, dan selesai kembali ke Staff.</div>
             </div>
             <div class="p-4">
                 <div class="approval-roadmap">
-                    @foreach($steps as $value => $step)
+                    @foreach($trackingItems as $item)
                     @php
-                    $stepIndex = array_search($value, $keys, true);
-                    $state = 'upcoming';
-                    if ($pengajuanSurat->status === 'ditolak' && $stepIndex > $currentIndex) {
-                        $state = 'blocked';
-                    } elseif ($stepIndex < $currentIndex) {
-                        $state = 'done';
-                    } elseif ($stepIndex === $currentIndex) {
-                        $state = $pengajuanSurat->status === 'ditolak' ? 'rejected' : 'current';
-                    }
+                    $step = $item['style'];
+                    $state = $item['state'];
+                    $riwayat = $item['riwayat'];
                     @endphp
                     <div class="roadmap-item {{ $state }}">
                         <div class="roadmap-node">
@@ -317,16 +402,24 @@ $verificationUrl = $verificationCode ? route('verification.show', $verificationC
                                     <div class="roadmap-owner">{{ $step['owner'] }}</div>
                                     <h6 class="mb-1 fw-bold">{{ $step['label'] }}</h6>
                                     <p class="mb-0 text-muted small">{{ $step['description'] }}</p>
+                                    @if($riwayat?->catatan)
+                                    <div class="roadmap-note">{{ $riwayat->catatan }}</div>
+                                    @endif
+                                    @if($riwayat)
+                                    <div class="roadmap-meta">
+                                        {{ $riwayat->actor?->name ?? 'Sistem' }} • {{ $riwayat->created_at->format('d/m/Y H:i') }}
+                                    </div>
+                                    @endif
                                 </div>
                                 <span class="roadmap-state">
                                     @if($state === 'done')
                                     Selesai
                                     @elseif($state === 'current')
                                     Aktif
+                                    @elseif($state === 'revision')
+                                    Revisi
                                     @elseif($state === 'rejected')
                                     Ditolak
-                                    @elseif($state === 'blocked')
-                                    Terhenti
                                     @else
                                     Menunggu
                                     @endif
@@ -820,6 +913,22 @@ $verificationUrl = $verificationCode ? route('verification.show', $verificationC
         white-space: nowrap;
     }
 
+    .roadmap-note {
+        background: #fff;
+        border-left: 3px solid #0f766e;
+        color: #475569;
+        font-size: .82rem;
+        margin-top: 10px;
+        padding: 8px 10px;
+    }
+
+    .roadmap-meta {
+        color: #64748b;
+        font-size: .76rem;
+        font-weight: 700;
+        margin-top: 8px;
+    }
+
     .roadmap-item.done .roadmap-node,
     .roadmap-item.done:not(:last-child)::before {
         background: #0f766e;
@@ -854,21 +963,36 @@ $verificationUrl = $verificationCode ? route('verification.show', $verificationC
         color: #92400e;
     }
 
-    .roadmap-item.rejected .roadmap-node,
-    .roadmap-item.blocked .roadmap-node {
+    .roadmap-item.revision .roadmap-node {
+        background: #f59e0b;
+        border-color: #f59e0b;
+        color: #fff;
+        box-shadow: 0 0 0 5px rgba(245, 158, 11, .16);
+    }
+
+    .roadmap-item.revision .roadmap-card {
+        background: #fffbeb;
+        border-color: #fde68a;
+    }
+
+    .roadmap-item.revision .roadmap-state {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .roadmap-item.rejected .roadmap-node {
         background: #ef4444;
         border-color: #ef4444;
         color: #fff;
+        box-shadow: 0 0 0 5px rgba(239, 68, 68, .14);
     }
 
-    .roadmap-item.rejected .roadmap-card,
-    .roadmap-item.blocked .roadmap-card {
+    .roadmap-item.rejected .roadmap-card {
         background: #fef2f2;
         border-color: #fecaca;
     }
 
-    .roadmap-item.rejected .roadmap-state,
-    .roadmap-item.blocked .roadmap-state {
+    .roadmap-item.rejected .roadmap-state {
         background: #fee2e2;
         color: #991b1b;
     }

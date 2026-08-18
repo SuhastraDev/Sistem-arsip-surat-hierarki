@@ -1095,6 +1095,129 @@ class PengajuanSuratPhaseOneTest extends TestCase
         ]);
     }
 
+    public function test_tracking_shows_revision_and_resubmit_state(): void
+    {
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $kasi = User::where('role', 'kasi')->firstOrFail();
+        $jenisSurat = JenisSurat::where('slug', 'surat-tugas')->firstOrFail();
+
+        $this->actingAs($staff)
+            ->post(route('pengajuan-surat.store'), [
+                'jenis_surat_id' => $jenisSurat->id,
+                'tanggal_pengajuan' => '2026-07-25',
+                'perihal' => 'Pengajuan tracking revisi',
+                'fields' => [
+                    'dasar_pertama' => 'Peraturan Gubernur Sumatera Selatan Nomor 48 Tahun 2016.',
+                    'dasar_kedua' => 'Surat Kepala Bappeda Nomor 000.1.5/1517/Bappeda-IV/2026.',
+                    'pegawai_berangkat' => 'Mas Asep - NIP 199909062025211021 - Staf Lapangan',
+                    'kegiatan' => 'Monitoring kawasan',
+                    'tujuan_perjalanan' => 'Hutan Lindung',
+                    'tanggal_mulai_perjalanan' => '2026-07-26',
+                    'tanggal_selesai_perjalanan' => '2026-07-27',
+                    'keterangan_biaya' => '-',
+                    'kewajiban_laporan' => 'Melakukan pemantauan',
+                    'penandatangan' => 'Kabid',
+                ],
+            ]);
+
+        $pengajuan = PengajuanSurat::firstOrFail();
+
+        $this->actingAs($kasi)
+            ->post(route('pengajuan-surat.process', $pengajuan), [
+                'aksi' => 'periksa',
+                'catatan' => 'Mulai diperiksa Kasi',
+            ])
+            ->assertRedirect()
+            ->assertSessionMissing('error');
+
+        $this->actingAs($kasi)
+            ->post(route('pengajuan-surat.process', $pengajuan), [
+                'aksi' => 'revisi',
+                'catatan' => 'Lengkapi tujuan perjalanan.',
+            ])
+            ->assertRedirect()
+            ->assertSessionMissing('error');
+
+        $this->actingAs($staff)
+            ->get(route('pengajuan-surat.show', $pengajuan))
+            ->assertOk()
+            ->assertSee('Pengajuan perlu revisi')
+            ->assertSee('Perlu Revisi')
+            ->assertSee('Lengkapi tujuan perjalanan.')
+            ->assertSee('Ajukan Ulang');
+
+        $this->actingAs($staff)
+            ->post(route('pengajuan-surat.process', $pengajuan), [
+                'aksi' => 'ajukan_ulang',
+                'catatan' => 'Sudah dilengkapi.',
+            ])
+            ->assertRedirect()
+            ->assertSessionMissing('error');
+
+        $this->actingAs($staff)
+            ->get(route('pengajuan-surat.show', $pengajuan))
+            ->assertOk()
+            ->assertSee('Diajukan Ulang')
+            ->assertSee('Sudah dilengkapi.')
+            ->assertDontSee('Pengajuan perlu revisi');
+    }
+
+    public function test_tracking_shows_rejected_terminal_state(): void
+    {
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $kasi = User::where('role', 'kasi')->firstOrFail();
+        $jenisSurat = JenisSurat::where('slug', 'surat-tugas')->firstOrFail();
+
+        $this->actingAs($staff)
+            ->post(route('pengajuan-surat.store'), [
+                'jenis_surat_id' => $jenisSurat->id,
+                'tanggal_pengajuan' => '2026-07-25',
+                'perihal' => 'Pengajuan tracking ditolak',
+                'fields' => [
+                    'dasar_pertama' => 'Peraturan Gubernur Sumatera Selatan Nomor 48 Tahun 2016.',
+                    'dasar_kedua' => 'Surat Kepala Bappeda Nomor 000.1.5/1517/Bappeda-IV/2026.',
+                    'pegawai_berangkat' => 'Mas Asep - NIP 199909062025211021 - Staf Lapangan',
+                    'kegiatan' => 'Monitoring kawasan',
+                    'tujuan_perjalanan' => 'Hutan Lindung',
+                    'tanggal_mulai_perjalanan' => '2026-07-26',
+                    'tanggal_selesai_perjalanan' => '2026-07-27',
+                    'keterangan_biaya' => '-',
+                    'kewajiban_laporan' => 'Melakukan pemantauan',
+                    'penandatangan' => 'Kabid',
+                ],
+            ]);
+
+        $pengajuan = PengajuanSurat::firstOrFail();
+
+        $this->actingAs($kasi)
+            ->post(route('pengajuan-surat.process', $pengajuan), [
+                'aksi' => 'periksa',
+                'catatan' => 'Mulai diperiksa Kasi',
+            ])
+            ->assertRedirect()
+            ->assertSessionMissing('error');
+
+        $this->actingAs($kasi)
+            ->post(route('pengajuan-surat.process', $pengajuan), [
+                'aksi' => 'ditolak',
+                'catatan' => 'Tidak sesuai kebutuhan kegiatan.',
+            ])
+            ->assertRedirect()
+            ->assertSessionMissing('error');
+
+        $this->actingAs($staff)
+            ->get(route('pengajuan-surat.show', $pengajuan))
+            ->assertOk()
+            ->assertSee('Pengajuan ditolak')
+            ->assertSee('Ditolak')
+            ->assertSee('Tidak sesuai kebutuhan kegiatan.')
+            ->assertDontSee('Ajukan Ulang');
+    }
+
     public function test_pengajuan_approval_flows_from_kasi_to_kabid(): void
     {
         $this->seed();
