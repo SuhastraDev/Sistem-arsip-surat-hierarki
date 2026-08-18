@@ -72,8 +72,8 @@ class PengajuanSuratPhaseOneTest extends TestCase
                 'tanggal_pengajuan' => '2026-07-24',
                 'perihal' => 'Permohonan surat tugas monitoring lapangan',
                 'fields' => [
-                    'dasar_pertama' => 'Peraturan Gubernur Sumatera Selatan Nomor 48 Tahun 2016.',
-                    'dasar_kedua' => 'Surat Kepala Bappeda Nomor 000.1.5/1517/Bappeda-IV/2026.',
+                    'dasar_pertama' => 'DASAR PERTAMA PALSU',
+                    'dasar_kedua' => 'DASAR KEDUA PALSU',
                     'pegawai_berangkat' => 'Mas Asep - NIP 199909062025211021 - Staf Lapangan',
                     'kegiatan' => 'Monitoring kawasan hutan',
                     'tujuan_perjalanan' => 'Kawasan Hutan Lindung',
@@ -185,6 +185,8 @@ class PengajuanSuratPhaseOneTest extends TestCase
         $formData = PengajuanSurat::firstOrFail()->metadata['form_data'];
 
         $this->assertStringStartsWith('800.1.11.1/001/ST/Dishut.III/', $formData['nomor_surat']);
+        $this->assertSame('Peraturan Gubernur Sumatera Selatan Nomor: 48 Tahun 2016 tentang Susunan Organisasi, Uraian Tugas dan Fungsi Dinas Kehutanan Provinsi Sumatera Selatan.', $formData['dasar_pertama']);
+        $this->assertSame('Surat Kepala Badan Perencanaan Pembangunan Daerah Nomor : 000.1.5/1517/Bappeda-IV/2026 Tanggal 21 Juli 2026 tentang Peningkatan Kapasitas dalam Rangka Pembangunan Rendah Karbon Daerah di Provinsi Sumatera Selatan.', $formData['dasar_kedua']);
         $this->assertSame('5 hari / 01/09/2026 s.d. 05/09/2026', $formData['lama_perjalanan']);
         $this->assertStringContainsString('Bapak Budi (Kabid)', $formData['penandatangan']);
     }
@@ -601,7 +603,9 @@ class PengajuanSuratPhaseOneTest extends TestCase
         $this->assertStringContainsString('PEMERINTAH PROVINSI SUMATERA SELATAN', $documentXml);
         $this->assertStringContainsString('SURAT ', $documentXml);
         $this->assertStringContainsString('TUGAS', $documentXml);
-        $this->assertStringContainsString('Dasar pertama custom.', $documentXml);
+        $this->assertStringContainsString('Peraturan Gubernur Sumatera Selatan Nomor: 48 Tahun 2016 tentang Susunan Organisasi, Uraian Tugas dan Fungsi Dinas Kehutanan Provinsi Sumatera Selatan.', $documentXml);
+        $this->assertStringContainsString('Surat Kepala Badan Perencanaan Pembangunan Daerah Nomor : 000.1.5/1517/Bappeda-IV/2026 Tanggal 21 Juli 2026 tentang Peningkatan Kapasitas dalam Rangka Pembangunan Rendah Karbon Daerah di Provinsi Sumatera Selatan.', $documentXml);
+        $this->assertStringNotContainsString('Dasar pertama custom.', $documentXml);
         $this->assertStringContainsString('Rina Putri', $documentXml);
         $this->assertStringContainsString('Menghadiri rapat koordinasi pemulihan kawasan.', $documentXml);
         $this->assertStringContainsString('5 hari / 27/07/2026 s.d. 31/07/2026', $documentXml);

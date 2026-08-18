@@ -44,8 +44,8 @@ class SuratTemplateService
                 'template_note' => 'Template resmi SPT: dasar surat, daftar pegawai yang bepergian, kegiatan, tujuan perjalanan, lama perjalanan, dan penandatangan.',
                 'fields' => [
                     'nomor_surat' => ['label' => 'Nomor surat', 'type' => 'text', 'required' => true, 'readonly' => true, 'source' => 'surat_tugas.nomor_surat', 'placeholder' => 'Terisi otomatis oleh sistem'],
-                    'dasar_pertama' => ['label' => 'Dasar pertama', 'type' => 'textarea', 'required' => true, 'placeholder' => 'Contoh: Peraturan Gubernur Sumatera Selatan Nomor 48 Tahun 2016 tentang Susunan Organisasi...'],
-                    'dasar_kedua' => ['label' => 'Dasar kedua', 'type' => 'textarea', 'required' => true, 'placeholder' => 'Contoh: Surat Kepala Bappeda Nomor ... tentang Peningkatan Kapasitas...'],
+                    'dasar_pertama' => ['label' => 'Dasar pertama', 'type' => 'textarea', 'required' => true, 'readonly' => true, 'source' => 'surat_tugas.dasar_pertama', 'placeholder' => 'Terisi otomatis dari template Surat Tugas'],
+                    'dasar_kedua' => ['label' => 'Dasar kedua', 'type' => 'textarea', 'required' => true, 'readonly' => true, 'source' => 'surat_tugas.dasar_kedua', 'placeholder' => 'Terisi otomatis dari template Surat Tugas'],
                     'pegawai_berangkat' => ['label' => 'Yang bepergian', 'type' => 'textarea', 'required' => true, 'placeholder' => "Contoh:\n1. Muhammad Kangau Rizki Akbar - NIP ... - Penata Muda/IX - Penata Layanan Operasional\n2. Vika Kusumaningrum - NIP ... - Pengatur Muda/V - Pengadministrasi Perkantoran"],
                     'kegiatan' => ['label' => 'Kegiatan yang dihadiri', 'type' => 'textarea', 'required' => true, 'placeholder' => 'Contoh: Menghadiri Kegiatan Peningkatan Kapasitas dalam Rangka Pembangunan Rendah Karbon Daerah...'],
                     'tujuan_perjalanan' => ['label' => 'Tujuan perjalanan', 'type' => 'textarea', 'required' => true, 'placeholder' => 'Contoh: Aston Palembang Hotel & Conference Center, Jl. Jend. Basuki Rachmat No.189...'],

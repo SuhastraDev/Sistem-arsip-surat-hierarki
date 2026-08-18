@@ -119,6 +119,8 @@ $oldFields = old('fields', []);
             'nota.kabid_nip': pegawaiProfile.kabid_nip || '',
             'nota.kabid_pangkat': pegawaiProfile.kabid_pangkat || '',
             'surat_tugas.nomor_surat': pegawaiProfile.surat_tugas_nomor || '',
+            'surat_tugas.dasar_pertama': pegawaiProfile.surat_tugas_dasar_pertama || '',
+            'surat_tugas.dasar_kedua': pegawaiProfile.surat_tugas_dasar_kedua || '',
         };
 
         function escapeHtml(value) {

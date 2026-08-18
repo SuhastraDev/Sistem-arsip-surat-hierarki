@@ -81,6 +81,8 @@ class PengajuanSuratController extends Controller
             'kabid_nip' => $kabidProfile['nip'],
             'kabid_pangkat' => $kabidProfile['pangkat'],
             'surat_tugas_nomor' => $this->generateNomorSuratTugas(),
+            'surat_tugas_dasar_pertama' => $this->suratTugasDasarPertama(),
+            'surat_tugas_dasar_kedua' => $this->suratTugasDasarKedua(),
         ];
         $cutiUsage = [
             'year' => (int) now()->format('Y'),
@@ -340,10 +342,22 @@ class PengajuanSuratController extends Controller
         }
 
         $fields['nomor_surat'] = $this->generateNomorSuratTugas();
+        $fields['dasar_pertama'] = $this->suratTugasDasarPertama();
+        $fields['dasar_kedua'] = $this->suratTugasDasarKedua();
         $fields['lama_perjalanan'] = $days.' hari / '.$this->formatIndonesianDate($start).' s.d. '.$this->formatIndonesianDate($end);
         $fields['penandatangan'] = $this->kabidPenandatangan();
 
         return $fields;
+    }
+
+    private function suratTugasDasarPertama(): string
+    {
+        return 'Peraturan Gubernur Sumatera Selatan Nomor: 48 Tahun 2016 tentang Susunan Organisasi, Uraian Tugas dan Fungsi Dinas Kehutanan Provinsi Sumatera Selatan.';
+    }
+
+    private function suratTugasDasarKedua(): string
+    {
+        return 'Surat Kepala Badan Perencanaan Pembangunan Daerah Nomor : 000.1.5/1517/Bappeda-IV/2026 Tanggal 21 Juli 2026 tentang Peningkatan Kapasitas dalam Rangka Pembangunan Rendah Karbon Daerah di Provinsi Sumatera Selatan.';
     }
 
     private function atasanLangsung(): string
