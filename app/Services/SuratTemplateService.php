@@ -279,11 +279,11 @@ class SuratTemplateService
             ?? $this->docxToPdfBinary($this->docxBinary($pengajuanSurat));
 
         if (! $pdf) {
-            if (app()->environment('production') && $this->usesOfficialTemplate($pengajuanSurat)) {
-                abort(503, 'Preview PDF template belum bisa dibuat. Pastikan LibreOffice/soffice aktif di server.');
+            if (app()->environment('production')) {
+                $pdf = $this->makeSimplePdf($pengajuanSurat);
+            } else {
+                return null;
             }
-
-            return null;
         }
 
         return response($pdf, 200, [

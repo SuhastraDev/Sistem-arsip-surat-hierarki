@@ -669,6 +669,30 @@ class PengajuanSuratPhaseOneTest extends TestCase
         $this->assertStringNotContainsString('Sistem E-Arsip Surat Digital', $documentXml);
     }
 
+    public function test_production_preview_falls_back_to_pdf_instead_of_503(): void
+    {
+        Storage::fake('local');
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $jenisSurat = JenisSurat::where('slug', 'nota-dinas')->firstOrFail();
+
+        $this->actingAs($staff)
+            ->post(route('pengajuan-surat.store'), [
+                'jenis_surat_id' => $jenisSurat->id,
+                'tanggal_pengajuan' => '2026-07-24',
+                'perihal' => 'Preview production fallback',
+                'fields' => $this->notaDinasFormFields(),
+            ]);
+
+        $pengajuan = PengajuanSurat::firstOrFail();
+        $this->app->detectEnvironment(fn () => 'production');
+
+        $this->get(route('pengajuan-surat.preview', $pengajuan))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf');
+    }
+
     public function test_signed_official_template_docx_contains_qr_image_for_all_letter_types(): void
     {
         $this->seed();
