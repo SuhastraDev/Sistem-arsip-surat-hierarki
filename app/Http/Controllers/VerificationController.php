@@ -5,12 +5,16 @@ namespace App\Http\Controllers;
 use App\Models\DigitalSignature;
 use App\Models\VerificationLog;
 use App\Services\DigitalSignatureService;
+use App\Services\QrCodeService;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 
 class VerificationController extends Controller
 {
-    public function __construct(private readonly DigitalSignatureService $digitalSignatureService) {}
+    public function __construct(
+        private readonly DigitalSignatureService $digitalSignatureService,
+        private readonly QrCodeService $qrCodeService
+    ) {}
 
     public function index(Request $request)
     {
@@ -40,6 +44,17 @@ class VerificationController extends Controller
         $result = $this->check($code, null);
 
         return view('verifikasi.index', compact('result'));
+    }
+
+    public function qr(string $code)
+    {
+        $normalizedCode = strtoupper(trim($code));
+        $payload = route('verification.show', $normalizedCode);
+
+        return response($this->qrCodeService->png($payload), 200, [
+            'Content-Type' => 'image/png',
+            'Cache-Control' => 'public, max-age=31536000, immutable',
+        ]);
     }
 
     private function check(string $code, ?UploadedFile $file): array

@@ -11,6 +11,8 @@ use ZipArchive;
 
 class SuratTemplateService
 {
+    public function __construct(private readonly QrCodeService $qrCodeService) {}
+
     public function definitions(): array
     {
         return [
@@ -594,7 +596,7 @@ class SuratTemplateService
             $xml = $this->replaceWordText($xml, 'Plh. Kepala Seksi Pengendalian Kerusakan dan Pengamanan Hutan, Ferry Yurisman, S.P NIP. 19730228 199003 1 009', $data['atasan_langsung'] ?? '-');
 
             if ($pengajuanSurat->digitalSignature) {
-                $xml = $this->replaceWordText($xml, 'Dr. Syafrul Yunardy, S.Hut., M.E.', $this->digitalSignatureBlockText($pengajuanSurat));
+                $xml = $this->replaceWordTextWithSignatureBlock($xml, 'Dr. Syafrul Yunardy, S.Hut., M.E.', $pengajuanSurat);
             }
 
             return $this->markCutiType($xml, $data['jenis_cuti'] ?? '');
@@ -615,7 +617,7 @@ class SuratTemplateService
             $xml = $this->replaceWordText($xml, 'Biaya yang timbul dari kegiatan tersebut dibebankan pada Badan Perencanaan Pembangunan Daerah. Membuat Laporan tertulis hasil pelaksanaan tugas tersebut 1 (satu) minggu setelah pelaksanaan tugas kepada Kepala Dinas Kehutanan Provinsi Sumatera Selatan.', trim(($data['keterangan_biaya'] ?? '')."\n".($data['kewajiban_laporan'] ?? '')) ?: '-');
 
             if ($pengajuanSurat->digitalSignature) {
-                $xml = $this->replaceWordText($xml, 'SUSILO HARTONO, S.Hut., M.Si', $this->digitalSignatureBlockText($pengajuanSurat));
+                $xml = $this->replaceWordTextWithSignatureBlock($xml, 'SUSILO HARTONO, S.Hut., M.Si', $pengajuanSurat);
             } elseif (! empty($data['penandatangan'])) {
                 $xml = $this->replaceWordText($xml, 'SUSILO HARTONO, S.Hut., M.Si', $data['penandatangan']);
             }
@@ -715,7 +717,7 @@ class SuratTemplateService
         $body .= $this->docxParagraph($this->fieldValue($data, 'keterangan_lampiran'), ['align' => 'both']);
         $body .= $this->docxSignatureBlock($tanggalLampiran, $jabatanPenandatangan, $namaPenandatangan, $pangkatPenandatangan, $nipPenandatangan);
 
-        return $this->makeDocxDocument($body);
+        return $this->makeDocxDocument($body, $pengajuanSurat);
     }
 
     private function makeSuratUndanganDocx(PengajuanSurat $pengajuanSurat): string
@@ -736,7 +738,9 @@ class SuratTemplateService
             $xml = $this->replaceWordText($xml, 'Penyampaian Rencana Kerja Tenaga Ahli Inventarisasi Potensi Kawasan', $data['agenda'] ?? '-');
             $xml = $this->replaceWordText($xml, 'Bernilai Ekosistem Penting (KBEP) Kewenangan Daerah Provinsi Sumatera Selatan Tahun Anggaran 2026', '');
             $xml = $this->replaceWordText($xml, 'Sdri. I Gusti Ayu Kusuma Wardani (0813-7391-4100).', $data['kontak_konfirmasi'] ?? '-');
-            $xml = $this->replaceWordText($xml, 'Drs. H. KOIMUDIN, S.H., M.M', $pengajuanSurat->digitalSignature ? $this->digitalSignatureBlockText($pengajuanSurat) : ($data['penandatangan'] ?? '-'));
+            $xml = $pengajuanSurat->digitalSignature
+                ? $this->replaceWordTextWithSignatureBlock($xml, 'Drs. H. KOIMUDIN, S.H., M.M', $pengajuanSurat)
+                : $this->replaceWordText($xml, 'Drs. H. KOIMUDIN, S.H., M.M', $data['penandatangan'] ?? '-');
 
             return $xml;
         });
@@ -766,6 +770,7 @@ class SuratTemplateService
         }
 
         $xml = $mapper($xml, $data, $pengajuanSurat);
+        $xml = $this->embedSignatureQrPlaceholders($zip, $xml, $pengajuanSurat);
         $zip->addFromString('word/document.xml', $xml);
         $zip->close();
 
@@ -815,23 +820,12 @@ class SuratTemplateService
         }
 
         return implode("\n", [
-            'Scan barcode / verifikasi kode',
-            $this->barcodeText($signature->verification_code),
+            'Scan QR verifikasi',
+            $this->qrCodeService->marker(),
             $signature->verification_code,
             'Ditandatangani digital',
             $signature->signer->name,
         ]);
-    }
-
-    private function barcodeText(string $value): string
-    {
-        $segments = [];
-
-        foreach (str_split($value) as $index => $character) {
-            $segments[] = (ord($character) + $index) % 2 === 0 ? '|||' : '| |';
-        }
-
-        return implode('', $segments);
     }
 
     private function parsePegawaiBerangkat(string $raw): array
@@ -1052,6 +1046,171 @@ class SuratTemplateService
         return $xml;
     }
 
+    private function replaceWordTextWithSignatureBlock(string $xml, string $search, PengajuanSurat $pengajuanSurat): string
+    {
+        $dom = new \DOMDocument;
+        $previous = libxml_use_internal_errors(true);
+        $loaded = $dom->loadXML($xml);
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+
+        if (! $loaded) {
+            return $xml;
+        }
+
+        $xpath = new \DOMXPath($dom);
+        $xpath->registerNamespace('w', 'http://schemas.openxmlformats.org/wordprocessingml/2006/main');
+        $searchText = $this->normalizeWordText($search);
+
+        foreach ($xpath->query('//w:p|//w:tc') as $container) {
+            $textNodes = $xpath->query('.//w:t', $container);
+
+            if (! $textNodes || $textNodes->length === 0) {
+                continue;
+            }
+
+            $current = '';
+
+            foreach ($textNodes as $node) {
+                $current .= $node->nodeValue;
+            }
+
+            if (! str_contains($this->normalizeWordText($current), $searchText)) {
+                continue;
+            }
+
+            $paragraph = $container->localName === 'p'
+                ? $container
+                : $xpath->query('.//w:p', $container)->item(0);
+
+            if (! $paragraph) {
+                return $xml;
+            }
+
+            foreach (iterator_to_array($paragraph->childNodes) as $child) {
+                if ($child->localName !== 'pPr') {
+                    $paragraph->removeChild($child);
+                }
+            }
+
+            $fragmentDom = new \DOMDocument;
+            $fragmentDom->loadXML('<root xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'.$this->docxSignatureRuns($pengajuanSurat).'</root>');
+
+            foreach (iterator_to_array($fragmentDom->documentElement->childNodes) as $child) {
+                $paragraph->appendChild($dom->importNode($child, true));
+            }
+
+            return $dom->saveXML() ?: $xml;
+        }
+
+        return $xml;
+    }
+
+    private function docxSignatureRuns(PengajuanSurat $pengajuanSurat): string
+    {
+        $signature = $pengajuanSurat->digitalSignature;
+
+        if (! $signature) {
+            return '<w:r><w:t>-</w:t></w:r>';
+        }
+
+        $runProperties = '<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="18"/>';
+        $boldProperties = '<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:b/><w:sz w:val="20"/>';
+
+        return '<w:r><w:rPr>'.$runProperties.'</w:rPr><w:t>Scan QR verifikasi</w:t></w:r>'
+            .'<w:r><w:br/></w:r>'
+            .'<w:r><w:rPr>'.$runProperties.'</w:rPr><w:t>'.$this->qrCodeService->marker().'</w:t></w:r>'
+            .'<w:r><w:br/></w:r>'
+            .'<w:r><w:rPr>'.$runProperties.'</w:rPr><w:t>'.$this->xmlText($signature->verification_code).'</w:t></w:r>'
+            .'<w:r><w:br/></w:r>'
+            .'<w:r><w:rPr>'.$runProperties.'</w:rPr><w:t>Ditandatangani digital</w:t></w:r>'
+            .'<w:r><w:br/></w:r>'
+            .'<w:r><w:rPr>'.$boldProperties.'</w:rPr><w:t>'.$this->xmlText($signature->signer->name).'</w:t></w:r>';
+    }
+
+    private function embedSignatureQrPlaceholders(ZipArchive $zip, string $xml, PengajuanSurat $pengajuanSurat): string
+    {
+        if (! $pengajuanSurat->digitalSignature || ! str_contains($xml, $this->qrCodeService->marker())) {
+            return $xml;
+        }
+
+        $relationshipId = $this->addSignatureQrImage($zip, $pengajuanSurat);
+        $marker = $this->qrCodeService->marker();
+
+        return str_replace(
+            [
+                '<w:t>'.$marker.'</w:t>',
+                '<w:t xml:space="preserve">'.$marker.'</w:t>',
+            ],
+            $this->docxQrDrawingRun($relationshipId),
+            $xml
+        );
+    }
+
+    private function addSignatureQrImage(ZipArchive $zip, PengajuanSurat $pengajuanSurat): string
+    {
+        $signature = $pengajuanSurat->digitalSignature;
+        $relationshipId = $this->nextDocumentRelationshipId($zip);
+        $imageName = 'signature-qr-'.$signature->verification_code.'.png';
+        $target = 'media/'.$imageName;
+        $payload = route('verification.show', $signature->verification_code);
+
+        $zip->addFromString('word/'.$target, $this->qrCodeService->png($payload, 4, 4));
+        $this->ensurePngContentType($zip);
+        $this->addDocumentRelationship($zip, $relationshipId, $target);
+
+        return $relationshipId;
+    }
+
+    private function ensurePngContentType(ZipArchive $zip): void
+    {
+        $contentTypes = $zip->getFromName('[Content_Types].xml') ?: '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"></Types>';
+
+        if (! str_contains($contentTypes, 'Extension="png"')) {
+            $contentTypes = str_replace(
+                '</Types>',
+                '<Default Extension="png" ContentType="image/png"/></Types>',
+                $contentTypes
+            );
+            $zip->addFromString('[Content_Types].xml', $contentTypes);
+        }
+    }
+
+    private function nextDocumentRelationshipId(ZipArchive $zip): string
+    {
+        $rels = $this->documentRelationshipsXml($zip);
+        preg_match_all('/Id="rId(\d+)"/', $rels, $matches);
+        $max = 0;
+
+        foreach ($matches[1] ?? [] as $id) {
+            $max = max($max, (int) $id);
+        }
+
+        return 'rId'.($max + 1);
+    }
+
+    private function addDocumentRelationship(ZipArchive $zip, string $relationshipId, string $target): void
+    {
+        $rels = $this->documentRelationshipsXml($zip);
+        $relationship = '<Relationship Id="'.$relationshipId.'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="'.$target.'"/>';
+        $rels = str_replace('</Relationships>', $relationship.'</Relationships>', $rels);
+
+        $zip->addFromString('word/_rels/document.xml.rels', $rels);
+    }
+
+    private function documentRelationshipsXml(ZipArchive $zip): string
+    {
+        return $zip->getFromName('word/_rels/document.xml.rels')
+            ?: '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
+    }
+
+    private function docxQrDrawingRun(string $relationshipId): string
+    {
+        $extent = 914400;
+
+        return '<w:r><w:drawing><wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" distT="0" distB="0" distL="0" distR="0"><wp:extent cx="'.$extent.'" cy="'.$extent.'"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:docPr id="1" name="QR Verifikasi"/><wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="0" name="QR Verifikasi"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="'.$relationshipId.'"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'.$extent.'" cy="'.$extent.'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>';
+    }
+
     private function markCutiType(string $xml, string $jenisCuti): string
     {
         $markers = [
@@ -1145,7 +1304,7 @@ class SuratTemplateService
 
         $safeCode = str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], $verificationCode);
         $stream .= "BT\n/F1 8 Tf\n".($x + 22).' '.($y - 12)." Td\n($safeCode) Tj\nET\n";
-        $stream .= "BT\n/F1 8 Tf\n".($x + 6).' '.($y - 26)." Td\n(Scan barcode / verifikasi kode) Tj\nET\n";
+        $stream .= "BT\n/F1 8 Tf\n".($x + 6).' '.($y - 26)." Td\n(Scan QR verifikasi) Tj\nET\n";
         $stream .= "BT\n/F1 10 Tf\n".($x + 8).' '.($topY - 96)." Td\n($signerName) Tj\nET\n";
         $stream .= "Q\n";
 
@@ -1203,13 +1362,24 @@ class SuratTemplateService
         return $bars;
     }
 
-    private function makeDocxDocument(string $body): string
+    private function makeDocxDocument(string $body, ?PengajuanSurat $pengajuanSurat = null): string
     {
         $temp = tempnam(sys_get_temp_dir(), 'docx');
         $zip = new ZipArchive;
         $zip->open($temp, ZipArchive::OVERWRITE);
-        $zip->addFromString('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
+        $zip->addFromString('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
         $zip->addFromString('_rels/.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
+        $zip->addFromString('word/_rels/document.xml.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>');
+
+        if ($pengajuanSurat?->digitalSignature && str_contains($body, $this->qrCodeService->marker())) {
+            $relationshipId = $this->addSignatureQrImage($zip, $pengajuanSurat);
+            $body = str_replace(
+                '<w:t xml:space="preserve">'.$this->qrCodeService->marker().'</w:t>',
+                $this->docxQrDrawingRun($relationshipId),
+                $body
+            );
+        }
+
         $zip->addFromString('word/document.xml', '<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'.$body.'<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="900" w:right="900" w:bottom="900" w:left="900"/></w:sectPr></w:body></w:document>');
         $zip->close();
 

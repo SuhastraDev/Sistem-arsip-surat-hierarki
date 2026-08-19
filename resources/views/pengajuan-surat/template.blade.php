@@ -307,7 +307,7 @@
                 <div>Kepala Bidang</div>
                 <div class="signature-line {{ $pengajuanSurat->digitalSignature ? '' : 'unsigned' }}">
                     @if($pengajuanSurat->digitalSignature)
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=112x112&data={{ urlencode($verificationUrl) }}" alt="QR verifikasi {{ $signature->verification_code }}">
+                    <img src="{{ route('verification.qr', $signature->verification_code) }}" alt="QR verifikasi {{ $signature->verification_code }}">
                     <code>{{ $signature->verification_code }}</code>
                     <div class="signature-note">Ditandatangani digital</div>
                     @endif

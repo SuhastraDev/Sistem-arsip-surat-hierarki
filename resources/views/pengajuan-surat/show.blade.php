@@ -139,7 +139,7 @@ $verificationUrl = $verificationCode ? route('verification.show', $verificationC
 @if($pengajuanSurat->status === 'selesai')
 <div class="alert alert-success">
     <strong>Dokumen final sudah kembali ke Staff pemohon.</strong>
-    Barcode/QR verifikasi sudah ditempatkan di area TTD. PDF final membawa barcode verifikasi, DOCX membawa kode verifikasi.
+    QR verifikasi sudah ditempatkan di area TTD. PDF dan DOCX final membawa QR scannable serta kode verifikasi.
 </div>
 @endif
 @if($pengajuanSurat->status === 'draft')
@@ -291,7 +291,7 @@ $verificationUrl = $verificationCode ? route('verification.show', $verificationC
             <div class="detail-panel-header d-flex flex-column flex-md-row justify-content-between gap-3">
                 <div>
                     <strong><i class="fas fa-file-contract me-2 text-primary"></i>Data Persyaratan</strong>
-                    <div class="small text-muted mt-1">Preview dokumen tampil dalam modal. Setelah Kabid tanda tangan, barcode/QR berada di area TTD dan PDF final membawa barcode verifikasi.</div>
+                    <div class="small text-muted mt-1">Preview dokumen tampil dalam modal. Setelah Kabid tanda tangan, QR verifikasi berada di area TTD dan PDF final membawa QR scannable.</div>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
                     <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#documentPreviewModal">
@@ -355,12 +355,12 @@ $verificationUrl = $verificationCode ? route('verification.show', $verificationC
                 @if($verificationUrl)
                 <div class="verification-box">
                     <div class="verification-qr">
-                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=136x136&data={{ urlencode($verificationUrl) }}" alt="QR verifikasi {{ $verificationCode }}">
+                        <img src="{{ route('verification.qr', $verificationCode) }}" alt="QR verifikasi {{ $verificationCode }}">
                     </div>
                     <div>
                         <span class="verification-kicker">Kode Verifikasi</span>
                         <code>{{ $verificationCode }}</code>
-                        <p class="small text-muted mb-2">QR tampil di area TTD preview web. PDF final membawa barcode verifikasi di area TTD.</p>
+                        <p class="small text-muted mb-2">QR tampil di area TTD preview web. PDF final membawa QR verifikasi di area TTD.</p>
                         <a href="{{ $verificationUrl }}" class="btn btn-sm btn-outline-success">
                             <i class="fas fa-shield-halved me-1"></i>Buka Verifikasi
                         </a>

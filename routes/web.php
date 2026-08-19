@@ -18,6 +18,7 @@ Route::get('/', function () {
 
 Route::get('/verifikasi', [VerificationController::class, 'index'])->name('verification.index');
 Route::post('/verifikasi', [VerificationController::class, 'verify'])->name('verification.verify');
+Route::get('/verifikasi/{code}/qr.png', [VerificationController::class, 'qr'])->name('verification.qr');
 Route::get('/verifikasi/{code}', [VerificationController::class, 'show'])->name('verification.show');
 
 // Route untuk Tamu

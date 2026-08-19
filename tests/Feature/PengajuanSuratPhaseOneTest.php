@@ -39,16 +39,45 @@ class PengajuanSuratPhaseOneTest extends TestCase
 
     private function documentXmlFromDocxBinary(string $docx): string
     {
+        return $this->docxEntryFromBinary($docx, 'word/document.xml');
+    }
+
+    private function docxEntryFromBinary(string $docx, string $entry): string
+    {
         $temp = tempnam(sys_get_temp_dir(), 'docx-test');
         file_put_contents($temp, $docx);
 
         $zip = new \ZipArchive;
         $zip->open($temp);
-        $documentXml = $zip->getFromName('word/document.xml');
+        $content = $zip->getFromName($entry);
         $zip->close();
         @unlink($temp);
 
-        return $documentXml ?: '';
+        return $content ?: '';
+    }
+
+    private function docxHasQrImage(string $docx): bool
+    {
+        $temp = tempnam(sys_get_temp_dir(), 'docx-test');
+        file_put_contents($temp, $docx);
+
+        $zip = new \ZipArchive;
+        $zip->open($temp);
+        $hasImage = false;
+
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $name = $zip->getNameIndex($i);
+
+            if (is_string($name) && str_starts_with($name, 'word/media/signature-qr-') && str_ends_with($name, '.png')) {
+                $hasImage = true;
+                break;
+            }
+        }
+
+        $zip->close();
+        @unlink($temp);
+
+        return $hasImage;
     }
 
     private function notaDinasFormFields(array $overrides = []): array
@@ -640,7 +669,7 @@ class PengajuanSuratPhaseOneTest extends TestCase
         $this->assertStringNotContainsString('Sistem E-Arsip Surat Digital', $documentXml);
     }
 
-    public function test_signed_official_template_docx_contains_barcode_for_all_letter_types(): void
+    public function test_signed_official_template_docx_contains_qr_image_for_all_letter_types(): void
     {
         $this->seed();
 
@@ -737,9 +766,13 @@ class PengajuanSuratPhaseOneTest extends TestCase
             ]);
 
             $pengajuan->setRelation('digitalSignature', $signature->setRelation('signer', $kabid));
-            $documentXml = $this->documentXmlFromDocxBinary($templateService->docxBinary($pengajuan));
+            $docx = $templateService->docxBinary($pengajuan);
+            $documentXml = $this->documentXmlFromDocxBinary($docx);
+            $relationships = $this->docxEntryFromBinary($docx, 'word/_rels/document.xml.rels');
 
-            $this->assertStringContainsString('Scan barcode / verifikasi kode', $documentXml, $slug.' signed DOCX has barcode label.');
+            $this->assertStringContainsString('Scan QR verifikasi', $documentXml, $slug.' signed DOCX has QR label.');
+            $this->assertStringContainsString('relationships/image', $relationships, $slug.' signed DOCX has image relationship.');
+            $this->assertTrue($this->docxHasQrImage($docx), $slug.' signed DOCX has QR PNG image.');
             $this->assertStringContainsString($signature->verification_code, $documentXml, $slug.' signed DOCX has verification code.');
             $this->assertStringContainsString($kabid->name, $documentXml, $slug.' signed DOCX has signer name.');
         }
@@ -1306,10 +1339,14 @@ class PengajuanSuratPhaseOneTest extends TestCase
         Storage::disk('local')->assertExists($signature->metadata['file_paths']['docx']);
         $signedPdf = Storage::disk('local')->get($signature->metadata['file_paths']['pdf']);
 
-        $this->assertStringContainsString('Scan barcode', $signedPdf);
+        $this->assertStringContainsString('Scan QR', $signedPdf);
         $this->assertStringContainsString($signature->verification_code, $signedPdf);
-        $signedDocxXml = $this->documentXmlFromDocxBinary(Storage::disk('local')->get($signature->metadata['file_paths']['docx']));
-        $this->assertStringContainsString('Scan barcode / verifikasi kode', $signedDocxXml);
+        $signedDocx = Storage::disk('local')->get($signature->metadata['file_paths']['docx']);
+        $signedDocxXml = $this->documentXmlFromDocxBinary($signedDocx);
+        $signedDocxRelationships = $this->docxEntryFromBinary($signedDocx, 'word/_rels/document.xml.rels');
+        $this->assertStringContainsString('Scan QR verifikasi', $signedDocxXml);
+        $this->assertStringContainsString('relationships/image', $signedDocxRelationships);
+        $this->assertTrue($this->docxHasQrImage($signedDocx));
         $this->assertStringContainsString($signature->verification_code, $signedDocxXml);
         $this->assertStringContainsString($kabid->name, $signedDocxXml);
 
@@ -1317,6 +1354,10 @@ class PengajuanSuratPhaseOneTest extends TestCase
             ->get(route('pengajuan-surat.show', $pengajuan))
             ->assertOk()
             ->assertSee($signature->verification_code);
+
+        $this->get(route('verification.qr', $signature->verification_code))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'image/png');
 
         $this->actingAs($staff)
             ->get(route('pengajuan-surat.preview', $pengajuan))
