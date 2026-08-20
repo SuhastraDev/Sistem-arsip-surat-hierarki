@@ -767,6 +767,7 @@ class SuratTemplateService
         }
 
         $xml = $mapper($xml, $data, $pengajuanSurat);
+        $xml = $this->clearRemainingPlaceholderColors($xml);
         $xml = $this->embedSignatureQrPlaceholders($zip, $xml, $pengajuanSurat);
         $zip->addFromString('word/document.xml', $xml);
         $zip->close();
@@ -775,6 +776,19 @@ class SuratTemplateService
         @unlink($temp);
 
         return $content ?: '';
+    }
+
+    /**
+     * The source templates mark every fillable field with a placeholder font color
+     * (orange/red) so the person preparing the template can see what needs data. Field
+     * substitution already clears that color on the runs it touches, but static
+     * decoration sharing the same color (e.g. a ":" separator in its own table cell)
+     * isn't part of any field match. Once the template has been filled in, none of
+     * that color should remain in the final document, so strip it document-wide.
+     */
+    private function clearRemainingPlaceholderColors(string $xml): string
+    {
+        return preg_replace('/<w:color[^>]*w:val="(?:FF0000|F79646)"[^>]*\/>/i', '', $xml) ?? $xml;
     }
 
     private function fillSuratTugasPegawai(string $xml, string $rawPegawai): string
@@ -959,6 +973,8 @@ class SuratTemplateService
                 $textNodes->item($i)->nodeValue = '';
             }
 
+            $this->clearPlaceholderColor($xpath, $cellNode);
+
             return $dom->saveXML() ?: $xml;
         }
 
@@ -1048,10 +1064,25 @@ class SuratTemplateService
                 $textNodes->item($i)->nodeValue = '';
             }
 
+            $this->clearPlaceholderColor($xpath, $container);
+
             return $dom->saveXML() ?: null;
         }
 
         return null;
+    }
+
+    /**
+     * Templates mark fields the operator must fill in with a placeholder font color
+     * (orange/red). Once we've substituted real data into a run, strip that color so
+     * the filled-in text renders in the document's normal (black) color instead of
+     * still looking like an unfilled placeholder.
+     */
+    private function clearPlaceholderColor(\DOMXPath $xpath, \DOMNode $container): void
+    {
+        foreach ($xpath->query('.//w:r/w:rPr/w:color', $container) as $color) {
+            $color->parentNode->removeChild($color);
+        }
     }
 
     private function replaceWordTextWithSignatureBlock(string $xml, string $search, PengajuanSurat $pengajuanSurat): string
