@@ -611,12 +611,17 @@ class SuratTemplateService
             // separator between them, so address the cell directly instead of matching literal text.
             $xml = $this->replaceTableCellText($xml, 4, 2, 3, $data['tujuan_perjalanan'] ?? '-');
             $xml = $this->replaceWordText($xml, '5 (lima) hari / 27-31 Juli 2026', $data['lama_perjalanan'] ?? '-');
-            $xml = $this->replaceTableCellText($xml, 4, 4, 3, trim(($data['keterangan_biaya'] ?? '').' '.($data['kewajiban_laporan'] ?? '')) ?: '-');
+            $xml = $this->replaceTableCellParagraphsText($xml, 4, 4, 3, [
+                $data['keterangan_biaya'] ?? '-',
+                $data['kewajiban_laporan'] ?? '-',
+            ]);
 
             if ($pengajuanSurat->digitalSignature) {
                 $xml = $this->replaceWordTextWithSignatureBlock($xml, 'Dr. SYAFRUL YUNARDY, S.Hut.,M.E', $pengajuanSurat);
             } elseif (! empty($data['penandatangan'])) {
-                $xml = $this->replaceWordText($xml, 'Dr. SYAFRUL YUNARDY, S.Hut.,M.E', $data['penandatangan']);
+                // penandatangan is stored as "Nama - Jabatan"; the TTD area only needs the name.
+                $namaPenandatangan = trim(explode(' - ', (string) $data['penandatangan'])[0]);
+                $xml = $this->replaceWordText($xml, 'Dr. SYAFRUL YUNARDY, S.Hut.,M.E', $namaPenandatangan ?: $data['penandatangan']);
             }
 
             return $xml;
@@ -1000,6 +1005,59 @@ class SuratTemplateService
         $text = $run->appendChild($dom->createElementNS($namespace, 'w:t'));
         $text->setAttribute('xml:space', 'preserve');
         $text->nodeValue = $replacement;
+
+        return $dom->saveXML() ?: $xml;
+    }
+
+    /**
+     * Fill a cell that holds one value per paragraph (e.g. a numbered list where each
+     * list item is its own <w:p>) with one value per paragraph, in order — instead of
+     * collapsing everything into the first paragraph and dropping the rest. Extra
+     * paragraphs beyond count($values) are left as-is; missing ones are skipped.
+     */
+    private function replaceTableCellParagraphsText(string $xml, int $table, int $row, int $cell, array $values): string
+    {
+        $dom = new \DOMDocument;
+        $previous = libxml_use_internal_errors(true);
+        $loaded = $dom->loadXML($xml);
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+
+        if (! $loaded) {
+            return $xml;
+        }
+
+        $xpath = new \DOMXPath($dom);
+        $xpath->registerNamespace('w', 'http://schemas.openxmlformats.org/wordprocessingml/2006/main');
+        $cellNode = $xpath->query('(//w:tbl)['.$table.']/w:tr['.$row.']/w:tc['.$cell.']')->item(0);
+
+        if (! $cellNode) {
+            return $xml;
+        }
+
+        $paragraphs = $xpath->query('.//w:p', $cellNode);
+
+        foreach (array_values($values) as $index => $value) {
+            $paragraph = $paragraphs->item($index) ?? null;
+
+            if (! $paragraph) {
+                break;
+            }
+
+            $textNodes = $xpath->query('.//w:t', $paragraph);
+
+            if (! $textNodes || $textNodes->length === 0) {
+                continue;
+            }
+
+            $textNodes->item(0)->nodeValue = $value;
+
+            for ($i = 1; $i < $textNodes->length; $i++) {
+                $textNodes->item($i)->nodeValue = '';
+            }
+
+            $this->clearPlaceholderColor($xpath, $paragraph);
+        }
 
         return $dom->saveXML() ?: $xml;
     }
