@@ -1242,16 +1242,25 @@ class SuratTemplateService
         }
 
         $relationshipId = $this->addSignatureQrImage($zip, $pengajuanSurat);
-        $marker = $this->qrCodeService->marker();
 
-        return str_replace(
-            [
-                '<w:t>'.$marker.'</w:t>',
-                '<w:t xml:space="preserve">'.$marker.'</w:t>',
-            ],
-            $this->docxQrDrawingRun($relationshipId),
-            $xml
-        );
+        return $this->replaceQrMarkerRun($xml, $relationshipId);
+    }
+
+    /**
+     * The marker text always sits alone inside its own <w:r>...<w:t>MARKER</w:t></w:r>.
+     * Swap that whole run for the QR drawing run rather than just the inner <w:t> —
+     * docxQrDrawingRun() already returns a self-contained <w:r>, so replacing only the
+     * <w:t> left the old run's opening/closing tags around it, nesting a <w:r> inside
+     * another <w:r>. Word silently tolerates that invalid structure but LibreOffice
+     * does not: it drops the malformed run, so the QR image never rendered in the
+     * LibreOffice-converted PDF even though it looked fine in Word.
+     */
+    private function replaceQrMarkerRun(string $xml, string $relationshipId): string
+    {
+        $marker = preg_quote($this->qrCodeService->marker(), '/');
+        $pattern = '/<w:r>(?:(?!<w:r>|<\/w:r>).)*?<w:t[^>]*>'.$marker.'<\/w:t><\/w:r>/s';
+
+        return preg_replace($pattern, $this->docxQrDrawingRun($relationshipId), $xml, 1) ?? $xml;
     }
 
     private function addSignatureQrImage(ZipArchive $zip, PengajuanSurat $pengajuanSurat, bool $ensureContentType = true): string
@@ -1491,11 +1500,7 @@ class SuratTemplateService
             // falls back to an empty Types shell and overwrites the real one — corrupting the
             // package (LibreOffice then refuses to open it) even though Word tolerates it.
             $relationshipId = $this->addSignatureQrImage($zip, $pengajuanSurat, ensureContentType: false);
-            $body = str_replace(
-                '<w:t xml:space="preserve">'.$this->qrCodeService->marker().'</w:t>',
-                $this->docxQrDrawingRun($relationshipId),
-                $body
-            );
+            $body = $this->replaceQrMarkerRun($body, $relationshipId);
         }
 
         $zip->addFromString('word/document.xml', '<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'.$body.'<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="900" w:right="900" w:bottom="900" w:left="900"/></w:sectPr></w:body></w:document>');
