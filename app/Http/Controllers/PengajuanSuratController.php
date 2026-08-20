@@ -7,6 +7,7 @@ use App\Models\PengajuanSurat;
 use App\Models\RiwayatPengajuanSurat;
 use App\Models\User;
 use App\Services\DigitalSignatureService;
+use App\Services\HolidayService;
 use App\Services\PengajuanApprovalService;
 use App\Services\SuratTemplateService;
 use Illuminate\Database\QueryException;
@@ -22,6 +23,7 @@ class PengajuanSuratController extends Controller
         private readonly SuratTemplateService $templateService,
         private readonly DigitalSignatureService $digitalSignatureService,
         private readonly PengajuanApprovalService $approvalService,
+        private readonly HolidayService $holidayService,
     ) {}
 
     public function index(Request $request)
@@ -296,7 +298,7 @@ class PengajuanSuratController extends Controller
         $fields['atasan_langsung'] = $this->atasanLangsung();
 
         if (! empty($fields['tanggal_mulai']) && ! empty($fields['tanggal_selesai'])) {
-            $fields['lama_cuti'] = $this->calculateLeaveDays($fields['tanggal_mulai'], $fields['tanggal_selesai']).' hari';
+            $fields['lama_cuti'] = $this->calculateCutiDays($fields['tanggal_mulai'], $fields['tanggal_selesai'], $fields['jenis_cuti'] ?? null).' hari';
         }
 
         return $fields;
@@ -469,7 +471,7 @@ class PengajuanSuratController extends Controller
             return null;
         }
 
-        $requestedDays = $this->calculateLeaveDays($start, $end);
+        $requestedDays = $this->calculateCutiDays($start, $end, $leaveType);
 
         if ($requestedDays < 1) {
             throw ValidationException::withMessages([
@@ -543,7 +545,7 @@ class PengajuanSuratController extends Controller
                     return 0;
                 }
 
-                return $this->calculateLeaveDays($data['tanggal_mulai'] ?? null, $data['tanggal_selesai'] ?? null);
+                return $this->calculateCutiDays($data['tanggal_mulai'] ?? null, $data['tanggal_selesai'] ?? null, $leaveType);
             });
     }
 
@@ -574,7 +576,7 @@ class PengajuanSuratController extends Controller
                 }
 
                 $year = (int) date('Y', strtotime($data['tanggal_mulai']));
-                $usage[$leaveType][$year] = ($usage[$leaveType][$year] ?? 0) + $this->calculateLeaveDays($data['tanggal_mulai'] ?? null, $data['tanggal_selesai'] ?? null);
+                $usage[$leaveType][$year] = ($usage[$leaveType][$year] ?? 0) + $this->calculateCutiDays($data['tanggal_mulai'] ?? null, $data['tanggal_selesai'] ?? null, $leaveType);
 
                 return $usage;
             }, []);
@@ -646,6 +648,42 @@ class PengajuanSuratController extends Controller
         $endDate = new \DateTimeImmutable($end);
 
         return $startDate->diff($endDate)->days + 1;
+    }
+
+    /**
+     * Day-quota leave types (Cuti tahunan, Cuti alasan penting) are only reduced by
+     * actual working days: weekends and national holidays (including cuti bersama)
+     * inside the requested range don't count. Cuti melahirkan is different — its
+     * quota is a continuous 3-calendar-month period, not a count of workdays, so it
+     * keeps using plain calendar days instead. Surat Tugas travel duration also
+     * deliberately keeps using calculateLeaveDays() — a business trip spanning a
+     * weekend still took that many days.
+     */
+    private function calculateCutiDays(?string $start, ?string $end, ?string $jenisCuti = null): int
+    {
+        if ($jenisCuti === 'Cuti melahirkan') {
+            return $this->calculateLeaveDays($start, $end);
+        }
+
+        if (! $start || ! $end || strtotime($end) < strtotime($start)) {
+            return 0;
+        }
+
+        $cursor = new \DateTimeImmutable($start);
+        $endDate = new \DateTimeImmutable($end);
+        $days = 0;
+
+        while ($cursor <= $endDate) {
+            $isWeekend = in_array((int) $cursor->format('N'), [6, 7], true);
+
+            if (! $isWeekend && ! $this->holidayService->isHoliday($cursor->format('Y-m-d'))) {
+                $days++;
+            }
+
+            $cursor = $cursor->modify('+1 day');
+        }
+
+        return $days;
     }
 
     /**

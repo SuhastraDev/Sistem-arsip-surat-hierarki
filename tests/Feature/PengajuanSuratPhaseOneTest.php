@@ -11,6 +11,8 @@ use App\Services\SuratTemplateService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -23,6 +25,25 @@ class PengajuanSuratPhaseOneTest extends TestCase
         parent::setUp();
 
         Carbon::setTestNow(Carbon::parse('2026-01-01 08:00:00'));
+
+        // Cuti day calculations look up national holidays through HolidayService,
+        // which caches results from a public API. Seed that cache directly instead
+        // of mocking the HTTP call: Http::fake() resolves stubs in registration
+        // order, so a test-specific fake layered on top of one already set here
+        // would silently lose to it. Seeding the cache sidesteps that entirely and
+        // guarantees no test depends on the live service or today's real calendar.
+        // Defaults to no holidays, so quota math only has to reason about weekends;
+        // a test that needs a specific holiday calls seedHolidays() itself.
+        Http::fake();
+        $this->seedHolidays();
+    }
+
+    /**
+     * @param  array<string, string>  $holidays  map of "Y-m-d" => summary
+     */
+    private function seedHolidays(array $holidays = []): void
+    {
+        Cache::put('id-national-holidays', $holidays, now()->addHour());
     }
 
     protected function tearDown(): void
@@ -936,6 +957,39 @@ class PengajuanSuratPhaseOneTest extends TestCase
         $this->assertStringNotContainsString('Sistem E-Arsip Surat Digital', $documentXml);
     }
 
+    public function test_surat_cuti_excludes_national_holiday_from_quota(): void
+    {
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $jenisSurat = JenisSurat::where('slug', 'surat-cuti')->firstOrFail();
+
+        // Mon 17 - Wed 19 Aug 2026 is 3 weekdays, but with the 19th seeded as a
+        // holiday only 2 of them should count against the quota.
+        $this->seedHolidays(['2026-08-19' => 'Uji Coba Hari Libur Nasional']);
+
+        $this->actingAs($staff)
+            ->post(route('pengajuan-surat.store'), [
+                'jenis_surat_id' => $jenisSurat->id,
+                'tanggal_pengajuan' => '2026-08-12',
+                'perihal' => 'Pengajuan cuti melewati libur nasional',
+                'fields' => [
+                    'jenis_cuti' => 'Cuti tahunan',
+                    'tanggal_mulai' => '2026-08-17',
+                    'tanggal_selesai' => '2026-08-19',
+                    'unit_kerja' => 'Dinas Kehutanan Provinsi Sumatera Selatan',
+                    'alasan' => 'Keperluan keluarga',
+                    'alamat_selama_cuti' => 'Palembang',
+                    'telepon' => '081234567890',
+                ],
+            ])
+            ->assertRedirect(route('pengajuan-surat.index'));
+
+        $pengajuan = PengajuanSurat::where('perihal', 'Pengajuan cuti melewati libur nasional')->firstOrFail();
+        $this->assertSame('2 hari', $pengajuan->metadata['form_data']['lama_cuti']);
+        $this->assertSame(2, $pengajuan->metadata['cuti_quota']['requested_days']);
+    }
+
     public function test_surat_cuti_rejects_request_that_exceeds_annual_quota(): void
     {
         $this->seed();
@@ -954,8 +1008,9 @@ class PengajuanSuratPhaseOneTest extends TestCase
             'metadata' => [
                 'form_data' => [
                     'jenis_cuti' => 'Cuti tahunan',
-                    'tanggal_mulai' => '2026-01-06',
-                    'tanggal_selesai' => '2026-01-15',
+                    // Mon 5 Jan through Fri 16 Jan, weekend of 10-11 excluded = 10 working days.
+                    'tanggal_mulai' => '2026-01-05',
+                    'tanggal_selesai' => '2026-01-16',
                     'lama_cuti' => '10 hari',
                 ],
             ],
@@ -1061,8 +1116,9 @@ class PengajuanSuratPhaseOneTest extends TestCase
                 'perihal' => 'Pengajuan alasan penting',
                 'fields' => [
                     'jenis_cuti' => 'Cuti alasan penting',
+                    // Mon 17 Aug through Tue 1 Sep, two weekends excluded = 12 working days.
                     'tanggal_mulai' => '2026-08-17',
-                    'tanggal_selesai' => '2026-08-28',
+                    'tanggal_selesai' => '2026-09-01',
                     'unit_kerja' => 'Dinas Kehutanan Provinsi Sumatera Selatan',
                     'alasan' => 'Keperluan mendesak keluarga',
                     'alamat_selama_cuti' => 'Palembang',
@@ -1123,8 +1179,9 @@ class PengajuanSuratPhaseOneTest extends TestCase
             'metadata' => [
                 'form_data' => [
                     'jenis_cuti' => 'Cuti tahunan',
-                    'tanggal_mulai' => '2026-01-06',
-                    'tanggal_selesai' => '2026-01-15',
+                    // Mon 5 Jan through Fri 16 Jan, weekend of 10-11 excluded = 10 working days.
+                    'tanggal_mulai' => '2026-01-05',
+                    'tanggal_selesai' => '2026-01-16',
                     'lama_cuti' => '10 hari',
                 ],
             ],
@@ -1241,11 +1298,12 @@ class PengajuanSuratPhaseOneTest extends TestCase
             ->post(route('pengajuan-surat.store'), [
                 'jenis_surat_id' => $jenisSurat->id,
                 'tanggal_pengajuan' => '2026-08-12',
-                'perihal' => 'Pengajuan cuti tahunan 13 hari',
+                'perihal' => 'Pengajuan cuti tahunan 15 hari kerja',
                 'fields' => [
                     'jenis_cuti' => 'Cuti tahunan',
-                    'tanggal_mulai' => '2026-08-01',
-                    'tanggal_selesai' => '2026-08-13',
+                    // Mon 3 Aug through Fri 21 Aug, three weekends excluded = 15 working days.
+                    'tanggal_mulai' => '2026-08-03',
+                    'tanggal_selesai' => '2026-08-21',
                     'unit_kerja' => 'Dinas Kehutanan Provinsi Sumatera Selatan',
                     'alasan' => 'Keperluan keluarga',
                     'alamat_selama_cuti' => 'Palembang',
@@ -1256,7 +1314,7 @@ class PengajuanSuratPhaseOneTest extends TestCase
             ->assertSessionHasErrors('fields.tanggal_selesai');
 
         $this->assertDatabaseMissing('pengajuan_surats', [
-            'perihal' => 'Pengajuan cuti tahunan 13 hari',
+            'perihal' => 'Pengajuan cuti tahunan 15 hari kerja',
         ]);
     }
 
