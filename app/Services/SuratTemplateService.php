@@ -1211,6 +1211,8 @@ class SuratTemplateService
                 return null;
             }
 
+            $this->matchSiblingIndent($xpath, $paragraph);
+
             foreach (iterator_to_array($paragraph->childNodes) as $child) {
                 if ($child->localName !== 'pPr') {
                     $paragraph->removeChild($child);
@@ -1233,6 +1235,92 @@ class SuratTemplateService
         }
 
         return null;
+    }
+
+    /**
+     * The template's signature-name paragraph is missing the <w:ind> its sibling
+     * paragraphs (the jabatan heading above it, and the pangkat/NIP lines beside it)
+     * all share, so it starts further left than they do. Word/LibreOffice both render
+     * that indent gap literally, so once we replace this paragraph with the QR block
+     * it visibly doesn't line up with the rest of the signature block. Borrow the
+     * indent from a sibling paragraph that has one so they align.
+     */
+    private function matchSiblingIndent(\DOMXPath $xpath, \DOMNode $paragraph): void
+    {
+        $pPr = null;
+
+        foreach ($paragraph->childNodes as $child) {
+            if ($child->localName === 'pPr') {
+                $pPr = $child;
+                break;
+            }
+        }
+
+        if ($pPr && $xpath->query('w:ind', $pPr)->length > 0) {
+            return;
+        }
+
+        // Only the immediately adjacent paragraphs are part of the same signature
+        // block (this document has many unrelated paragraphs with their own,
+        // differently-valued <w:ind> scattered through the rest of the body).
+        $findAdjacentP = function (?\DOMNode $node, string $direction) {
+            while ($node && $node->localName !== 'p') {
+                $node = $direction === 'prev' ? $node->previousSibling : $node->nextSibling;
+            }
+
+            return $node;
+        };
+
+        $siblingInd = null;
+
+        foreach ([
+            $findAdjacentP($paragraph->previousSibling, 'prev'),
+            $findAdjacentP($paragraph->nextSibling, 'next'),
+        ] as $sibling) {
+            if (! $sibling) {
+                continue;
+            }
+
+            $ind = $xpath->query('w:pPr/w:ind', $sibling)->item(0);
+
+            if ($ind) {
+                $siblingInd = $ind;
+                break;
+            }
+        }
+
+        if (! $siblingInd) {
+            return;
+        }
+
+        $dom = $paragraph->ownerDocument;
+        $namespace = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+
+        if (! $pPr) {
+            $pPr = $dom->createElementNS($namespace, 'w:pPr');
+            $paragraph->insertBefore($pPr, $paragraph->firstChild);
+        }
+
+        // <w:rPr> (paragraph mark run properties) must stay the last child of <w:pPr>
+        // per the OOXML schema; inserting <w:ind> after it makes the whole element
+        // get silently ignored instead of just misplaced.
+        $rPr = $xpath->query('w:rPr', $pPr)->item(0);
+
+        // The sibling's indent is typically a hanging indent built for a single-line,
+        // tab-stopped label (first line exdented to 0, wrapped lines at "left"). Word
+        // treats each manual <w:br/> line in the QR block as a "first line" too, so a
+        // hanging indent would leave every one of them sitting at 0 instead of lining
+        // up — copy only the "left" position, as a plain (non-hanging) indent, so
+        // every line of the block shifts over uniformly.
+        $leftValue = $siblingInd->getAttribute('w:left') ?: $siblingInd->getAttributeNS($namespace, 'left');
+        $indNode = $dom->createElementNS($namespace, 'w:ind');
+        $indNode->setAttribute('w:left', $leftValue);
+
+        if ($rPr) {
+            $pPr->insertBefore($indNode, $rPr);
+        } else {
+            $pPr->appendChild($indNode);
+        }
     }
 
     private function preventTableRowSplit(\DOMDocument $dom, \DOMNode $node): void
