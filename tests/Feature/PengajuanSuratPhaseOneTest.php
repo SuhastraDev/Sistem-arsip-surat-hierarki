@@ -196,7 +196,9 @@ class PengajuanSuratPhaseOneTest extends TestCase
                 'fields' => [
                     'dasar_pertama' => 'DASAR PERTAMA PALSU',
                     'dasar_kedua' => 'DASAR KEDUA PALSU',
-                    'pegawai_berangkat' => 'Mas Asep - NIP 199909062025211021 - Staf Lapangan',
+                    'pegawai_berangkat' => [
+                        ['nama' => 'Mas Asep', 'nip' => '199909062025211021', 'pangkat' => 'Pengatur Muda/II.a', 'jabatan' => 'Staf Lapangan'],
+                    ],
                     'kegiatan' => 'Monitoring kawasan hutan',
                     'tujuan_perjalanan' => 'Kawasan Hutan Lindung',
                     'tanggal_mulai_perjalanan' => '2026-07-25',
@@ -305,7 +307,9 @@ class PengajuanSuratPhaseOneTest extends TestCase
                     'nomor_surat' => 'NOMOR-MANUAL-TIDAK-BOLEH-TERPAKAI',
                     'dasar_pertama' => 'Peraturan Gubernur Sumatera Selatan Nomor 48 Tahun 2016.',
                     'dasar_kedua' => 'Surat Kepala Bappeda Nomor 000.1.5/1517/Bappeda-IV/2026.',
-                    'pegawai_berangkat' => 'Mas Asep - NIP 199909062025211021 - Staf Lapangan',
+                    'pegawai_berangkat' => [
+                        ['nama' => 'Mas Asep', 'nip' => '199909062025211021', 'pangkat' => 'Pengatur Muda/II.a', 'jabatan' => 'Staf Lapangan'],
+                    ],
                     'kegiatan' => 'Monitoring kawasan hutan',
                     'tujuan_perjalanan' => 'Kawasan Hutan Lindung',
                     'tanggal_mulai_perjalanan' => '2026-09-01',
@@ -342,7 +346,9 @@ class PengajuanSuratPhaseOneTest extends TestCase
                 'fields' => [
                     'dasar_pertama' => 'Peraturan Gubernur Sumatera Selatan Nomor 48 Tahun 2016.',
                     'dasar_kedua' => 'Surat Kepala Bappeda Nomor 000.1.5/1517/Bappeda-IV/2026.',
-                    'pegawai_berangkat' => 'Mas Asep - NIP 199909062025211021 - Staf Lapangan',
+                    'pegawai_berangkat' => [
+                        ['nama' => 'Mas Asep', 'nip' => '199909062025211021', 'pangkat' => 'Pengatur Muda/II.a', 'jabatan' => 'Staf Lapangan'],
+                    ],
                     'kegiatan' => 'Monitoring kawasan hutan',
                     'tujuan_perjalanan' => 'Kawasan Hutan Lindung',
                     'tanggal_mulai_perjalanan' => '2026-09-05',
@@ -426,7 +432,9 @@ class PengajuanSuratPhaseOneTest extends TestCase
                 'fields' => [
                     'dasar_pertama' => 'Dasar pertama.',
                     'dasar_kedua' => 'Dasar kedua.',
-                    'pegawai_berangkat' => '1. Rina Putri - NIP 198801012010012001 - Penata/III.c - Analis Kehutanan',
+                    'pegawai_berangkat' => [
+                        ['nama' => 'Rina Putri', 'nip' => '198801012010012001', 'pangkat' => 'Penata/III.c', 'jabatan' => 'Analis Kehutanan'],
+                    ],
                     'kegiatan' => 'Menghadiri rapat koordinasi.',
                     'tujuan_perjalanan' => 'Palembang',
                     'tanggal_mulai_perjalanan' => now()->subDay()->toDateString(),
@@ -633,6 +641,19 @@ class PengajuanSuratPhaseOneTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_staff_can_view_pengajuan_create_form(): void
+    {
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+
+        $this->actingAs($staff)
+            ->get(route('pengajuan-surat.create'))
+            ->assertOk()
+            ->assertSee('people-repeater', false)
+            ->assertSee('pegawai_berangkat', false);
+    }
+
     public function test_staff_can_preview_and_export_pengajuan_template(): void
     {
         Storage::fake('local');
@@ -748,7 +769,9 @@ class PengajuanSuratPhaseOneTest extends TestCase
                 'nomor_surat' => '800.1.11.1/001/ST/Dishut.III/2026',
                 'dasar_pertama' => 'Peraturan Gubernur Sumatera Selatan Nomor: 48 Tahun 2016 tentang Susunan Organisasi, Uraian Tugas dan Fungsi Dinas Kehutanan Provinsi Sumatera Selatan.',
                 'dasar_kedua' => 'Surat Kepala Badan Perencanaan Pembangunan Daerah Nomor : 000.1.5/1517/Bappeda-IV/2026 Tanggal 21 Juli 2026 tentang Peningkatan Kapasitas dalam Rangka Pembangunan Rendah Karbon Daerah di Provinsi Sumatera Selatan.',
-                'pegawai_berangkat' => 'Mas Asep - NIP 199909062025211021 - Staf Lapangan',
+                'pegawai_berangkat' => [
+                    ['nama' => 'Mas Asep', 'nip' => '199909062025211021', 'pangkat' => 'Pengatur Muda/II.a', 'jabatan' => 'Staf Lapangan'],
+                ],
                 'kegiatan' => 'Monitoring kawasan',
                 'tujuan_perjalanan' => 'Hutan Lindung',
                 'lama_perjalanan' => '2 hari / 25/07/2026 s.d. 26/07/2026',
@@ -838,7 +861,11 @@ class PengajuanSuratPhaseOneTest extends TestCase
                 'fields' => [
                     'dasar_pertama' => 'Dasar pertama custom.',
                     'dasar_kedua' => 'Dasar kedua custom.',
-                    'pegawai_berangkat' => "1. Rina Putri - NIP 198801012010012001 - Penata/III.c - Analis Kehutanan\n2. Budi Santoso - NIP 198902022011011002 - Penata Muda/III.a - Pengelola Data",
+                    'pegawai_berangkat' => [
+                        ['nama' => 'Rina Putri', 'nip' => '198801012010012001', 'pangkat' => 'Penata/III.c', 'jabatan' => 'Analis Kehutanan'],
+                        ['nama' => 'Budi Santoso', 'nip' => '198902022011011002', 'pangkat' => 'Penata Muda/III.a', 'jabatan' => 'Pengelola Data'],
+                        ['nama' => 'Citra Wulandari', 'nip' => '199003032012012003', 'pangkat' => 'Penata Muda/III.b', 'jabatan' => 'Pengawas Kehutanan'],
+                    ],
                     'kegiatan' => 'Menghadiri rapat koordinasi pemulihan kawasan.',
                     'tujuan_perjalanan' => 'Kantor Dinas Kehutanan Provinsi Sumatera Selatan',
                     'tanggal_mulai_perjalanan' => '2026-07-27',
@@ -860,10 +887,55 @@ class PengajuanSuratPhaseOneTest extends TestCase
         $this->assertStringContainsString('Surat Kepala Badan Perencanaan Pembangunan Daerah Nomor : 000.1.5/1517/Bappeda-IV/2026 Tanggal 21 Juli 2026 tentang Peningkatan Kapasitas dalam Rangka Pembangunan Rendah Karbon Daerah di Provinsi Sumatera Selatan.', $documentXml);
         $this->assertStringNotContainsString('Dasar pertama custom.', $documentXml);
         $this->assertStringContainsString('Rina Putri', $documentXml);
+        $this->assertStringContainsString('Budi Santoso', $documentXml);
+        // A 3rd traveler doesn't fit the template's fixed 2-person layout, so it must
+        // be cloned in as a new "3. Nama" row instead of being silently dropped.
+        $this->assertStringContainsString('3. Nama', $documentXml);
+        $this->assertStringContainsString('Citra Wulandari', $documentXml);
+        $this->assertStringContainsString('199003032012012003', $documentXml);
         $this->assertStringContainsString('Menghadiri rapat koordinasi pemulihan kawasan.', $documentXml);
         $this->assertStringContainsString('5 hari / 27/07/2026 s.d. 31/07/2026', $documentXml);
         $this->assertStringContainsString('Bapak Budi (Kabid)', $documentXml);
         $this->assertStringNotContainsString('Sistem E-Arsip Surat Digital', $documentXml);
+    }
+
+    public function test_surat_tugas_docx_removes_unused_second_traveler_block_for_single_traveler(): void
+    {
+        $this->seed();
+
+        $staff = User::where('role', 'staff')->firstOrFail();
+        $jenisSurat = JenisSurat::where('slug', 'surat-tugas')->firstOrFail();
+
+        $this->actingAs($staff)
+            ->post(route('pengajuan-surat.store'), [
+                'jenis_surat_id' => $jenisSurat->id,
+                'tanggal_pengajuan' => '2026-07-24',
+                'perihal' => 'Surat tugas satu orang',
+                'fields' => [
+                    'dasar_pertama' => 'Dasar pertama.',
+                    'dasar_kedua' => 'Dasar kedua.',
+                    'pegawai_berangkat' => [
+                        ['nama' => 'Rina Putri', 'nip' => '198801012010012001', 'pangkat' => 'Penata/III.c', 'jabatan' => 'Analis Kehutanan'],
+                    ],
+                    'kegiatan' => 'Menghadiri rapat koordinasi.',
+                    'tujuan_perjalanan' => 'Palembang',
+                    'tanggal_mulai_perjalanan' => '2026-07-27',
+                    'tanggal_selesai_perjalanan' => '2026-07-28',
+                    'keterangan_biaya' => '-',
+                    'kewajiban_laporan' => '-',
+                    'penandatangan' => 'Kabid',
+                ],
+            ]);
+
+        $pengajuan = PengajuanSurat::firstOrFail();
+        $response = $this->get(route('pengajuan-surat.export', [$pengajuan, 'docx']));
+        $documentXml = $this->documentXmlFromDocxResponse($response);
+
+        $this->assertStringContainsString('Rina Putri', $documentXml);
+        // The template's placeholder 2nd traveler must be gone entirely, not left
+        // behind showing "-" placeholders.
+        $this->assertStringNotContainsString('2. Nama', $documentXml);
+        $this->assertStringNotContainsString('Vika Kusumaningrum', $documentXml);
     }
 
     public function test_nota_dinas_system_fields_ignore_manual_request_values(): void
@@ -1387,7 +1459,9 @@ class PengajuanSuratPhaseOneTest extends TestCase
                     'nomor_surat' => '800.1.11.1/001/ST/Dishut.III/2026',
                     'dasar_pertama' => 'Peraturan Gubernur Sumatera Selatan Nomor 48 Tahun 2016.',
                     'dasar_kedua' => 'Surat Kepala Bappeda Nomor 000.1.5/1517/Bappeda-IV/2026.',
-                    'pegawai_berangkat' => 'Mas Asep - NIP 199909062025211021 - Staf Lapangan',
+                    'pegawai_berangkat' => [
+                        ['nama' => 'Mas Asep', 'nip' => '199909062025211021', 'pangkat' => 'Pengatur Muda/II.a', 'jabatan' => 'Staf Lapangan'],
+                    ],
                     'kegiatan' => 'Monitoring kawasan',
                     'tujuan_perjalanan' => 'Hutan Lindung',
                     'lama_perjalanan' => '2 (dua) hari / 25-26 Juli 2026',
@@ -1484,7 +1558,9 @@ class PengajuanSuratPhaseOneTest extends TestCase
                     'nomor_surat' => '800.1.11.1/002/ST/Dishut.III/2026',
                     'dasar_pertama' => 'Peraturan Gubernur Sumatera Selatan Nomor 48 Tahun 2016.',
                     'dasar_kedua' => 'Surat Kepala Bappeda Nomor 000.1.5/1517/Bappeda-IV/2026.',
-                    'pegawai_berangkat' => 'Mas Asep - NIP 199909062025211021 - Staf Lapangan',
+                    'pegawai_berangkat' => [
+                        ['nama' => 'Mas Asep', 'nip' => '199909062025211021', 'pangkat' => 'Pengatur Muda/II.a', 'jabatan' => 'Staf Lapangan'],
+                    ],
                     'kegiatan' => 'Monitoring kawasan',
                     'tujuan_perjalanan' => 'Hutan Lindung',
                     'lama_perjalanan' => '2 (dua) hari / 26-27 Juli 2026',
@@ -1539,7 +1615,9 @@ class PengajuanSuratPhaseOneTest extends TestCase
                 'fields' => [
                     'dasar_pertama' => 'Peraturan Gubernur Sumatera Selatan Nomor 48 Tahun 2016.',
                     'dasar_kedua' => 'Surat Kepala Bappeda Nomor 000.1.5/1517/Bappeda-IV/2026.',
-                    'pegawai_berangkat' => 'Mas Asep - NIP 199909062025211021 - Staf Lapangan',
+                    'pegawai_berangkat' => [
+                        ['nama' => 'Mas Asep', 'nip' => '199909062025211021', 'pangkat' => 'Pengatur Muda/II.a', 'jabatan' => 'Staf Lapangan'],
+                    ],
                     'kegiatan' => 'Monitoring kawasan',
                     'tujuan_perjalanan' => 'Hutan Lindung',
                     'tanggal_mulai_perjalanan' => '2026-07-26',
@@ -1608,7 +1686,9 @@ class PengajuanSuratPhaseOneTest extends TestCase
                 'fields' => [
                     'dasar_pertama' => 'Peraturan Gubernur Sumatera Selatan Nomor 48 Tahun 2016.',
                     'dasar_kedua' => 'Surat Kepala Bappeda Nomor 000.1.5/1517/Bappeda-IV/2026.',
-                    'pegawai_berangkat' => 'Mas Asep - NIP 199909062025211021 - Staf Lapangan',
+                    'pegawai_berangkat' => [
+                        ['nama' => 'Mas Asep', 'nip' => '199909062025211021', 'pangkat' => 'Pengatur Muda/II.a', 'jabatan' => 'Staf Lapangan'],
+                    ],
                     'kegiatan' => 'Monitoring kawasan',
                     'tujuan_perjalanan' => 'Hutan Lindung',
                     'tanggal_mulai_perjalanan' => '2026-07-26',
@@ -1663,7 +1743,9 @@ class PengajuanSuratPhaseOneTest extends TestCase
                 'fields' => [
                     'dasar_pertama' => 'Peraturan Gubernur Sumatera Selatan Nomor 48 Tahun 2016.',
                     'dasar_kedua' => 'Surat Kepala Bappeda Nomor 000.1.5/1517/Bappeda-IV/2026.',
-                    'pegawai_berangkat' => 'Mas Asep - NIP 199909062025211021 - Staf Lapangan',
+                    'pegawai_berangkat' => [
+                        ['nama' => 'Mas Asep', 'nip' => '199909062025211021', 'pangkat' => 'Pengatur Muda/II.a', 'jabatan' => 'Staf Lapangan'],
+                    ],
                     'kegiatan' => 'Monitoring kawasan',
                     'tujuan_perjalanan' => 'Hutan Lindung',
                     'tanggal_mulai_perjalanan' => '2026-07-26',

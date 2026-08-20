@@ -48,7 +48,15 @@ class SuratTemplateService
                     'nomor_surat' => ['label' => 'Nomor surat', 'type' => 'text', 'required' => true, 'readonly' => true, 'source' => 'surat_tugas.nomor_surat', 'placeholder' => 'Terisi otomatis oleh sistem'],
                     'dasar_pertama' => ['label' => 'Dasar pertama', 'type' => 'textarea', 'required' => true, 'readonly' => true, 'source' => 'surat_tugas.dasar_pertama', 'placeholder' => 'Terisi otomatis dari template Surat Tugas'],
                     'dasar_kedua' => ['label' => 'Dasar kedua', 'type' => 'textarea', 'required' => true, 'readonly' => true, 'source' => 'surat_tugas.dasar_kedua', 'placeholder' => 'Terisi otomatis dari template Surat Tugas'],
-                    'pegawai_berangkat' => ['label' => 'Yang bepergian', 'type' => 'textarea', 'required' => true, 'placeholder' => "Contoh:\n1. Muhammad Kangau Rizki Akbar - NIP ... - Penata Muda/IX - Penata Layanan Operasional\n2. Vika Kusumaningrum - NIP ... - Pengatur Muda/V - Pengadministrasi Perkantoran"],
+                    'pegawai_berangkat' => [
+                        'label' => 'Yang bepergian', 'type' => 'people', 'required' => true,
+                        'item_fields' => [
+                            'nama' => ['label' => 'Nama', 'placeholder' => 'Contoh: Muhammad Kangau Rizki Akbar, S.Hut'],
+                            'nip' => ['label' => 'NIP', 'placeholder' => 'Contoh: 19990906202521 1 021'],
+                            'pangkat' => ['label' => 'Pangkat/Golongan', 'placeholder' => 'Contoh: Penata Muda/IX'],
+                            'jabatan' => ['label' => 'Jabatan', 'placeholder' => 'Contoh: Penata Layanan Operasional'],
+                        ],
+                    ],
                     'kegiatan' => ['label' => 'Kegiatan yang dihadiri', 'type' => 'textarea', 'required' => true, 'placeholder' => 'Contoh: Menghadiri Kegiatan Peningkatan Kapasitas dalam Rangka Pembangunan Rendah Karbon Daerah...'],
                     'tujuan_perjalanan' => ['label' => 'Tujuan perjalanan', 'type' => 'textarea', 'required' => true, 'placeholder' => 'Contoh: Aston Palembang Hotel & Conference Center, Jl. Jend. Basuki Rachmat No.189...'],
                     'tanggal_mulai_perjalanan' => ['label' => 'Tanggal mulai perjalanan', 'type' => 'date', 'required' => true],
@@ -205,6 +213,16 @@ class SuratTemplateService
                 continue;
             }
 
+            if (($field['type'] ?? null) === 'people') {
+                $rules['fields.'.$key] = [$presenceRule, 'array', 'min:1'];
+
+                foreach (array_keys($field['item_fields'] ?? []) as $itemKey) {
+                    $rules['fields.'.$key.'.*.'.$itemKey] = ['required', 'string', 'max:255'];
+                }
+
+                continue;
+            }
+
             $rules['fields.'.$key] = [$presenceRule, 'string', 'max:'.($field['max'] ?? 2000)];
         }
 
@@ -227,10 +245,25 @@ class SuratTemplateService
 
     public function cleanFields(string $slug, array $input): array
     {
-        $allowed = array_keys($this->fields($slug));
+        $fieldDefs = $this->fields($slug);
+        $allowed = array_keys($fieldDefs);
 
         return collect(Arr::only($input, $allowed))
-            ->map(fn ($value) => is_string($value) ? trim($value) : $value)
+            ->map(function ($value, $key) use ($fieldDefs) {
+                if (($fieldDefs[$key]['type'] ?? null) === 'people' && is_array($value)) {
+                    return collect($value)
+                        ->map(fn ($item) => is_array($item)
+                            ? collect($item)->map(fn ($v) => is_string($v) ? trim($v) : $v)->all()
+                            : $item)
+                        // Drop rows the operator added but never filled in (e.g. an
+                        // "add person" click left blank) instead of storing/validating them.
+                        ->filter(fn ($item) => is_array($item) && collect($item)->contains(fn ($v) => filled($v)))
+                        ->values()
+                        ->all();
+                }
+
+                return is_string($value) ? trim($value) : $value;
+            })
             ->all();
     }
 
@@ -248,14 +281,33 @@ class SuratTemplateService
             ->map(fn ($field, $key) => [
                 'key' => $key,
                 'label' => $field['label'],
-                'value' => $this->displayValue($data[$key] ?? null),
+                'value' => $this->displayValue($data[$key] ?? null, $field),
             ])
             ->values()
             ->all();
     }
 
-    private function displayValue(mixed $value): string
+    private function displayValue(mixed $value, array $field = []): string
     {
+        if (($field['type'] ?? null) === 'people' && is_array($value)) {
+            $lines = collect($value)
+                ->map(function ($item, $index) {
+                    if (! is_array($item)) {
+                        return null;
+                    }
+
+                    $summary = collect(['nama', 'nip', 'pangkat', 'jabatan'])
+                        ->map(fn ($key) => filled($item[$key] ?? null) ? $item[$key] : '-')
+                        ->implode(' - ');
+
+                    return ($index + 1).'. '.$summary;
+                })
+                ->filter()
+                ->implode("\n");
+
+            return $lines !== '' ? $lines : '-';
+        }
+
         if (is_array($value)) {
             return $value['original_name'] ?? $value['name'] ?? '-';
         }
@@ -605,7 +657,7 @@ class SuratTemplateService
             $xml = $this->replaceWordText($xml, 'Tanggal: Juli 2026', 'Tanggal'."\t\t".': '.$this->formatIndonesianLongDate($pengajuanSurat->tanggal_pengajuan->toDateString()));
             $xml = $this->replaceWordText($xml, 'Peraturan Gubernur Sumatera Selatan Nomor: 48 Tahun 2016 tentang Susunan Organisasi, Uraian Tugas dan Fungsi Dinas Kehutanan Provinsi Sumatera Selatan.', $data['dasar_pertama'] ?? '-');
             $xml = $this->replaceWordText($xml, 'Surat Kepala Badan Perencanaan Pembangunan Daerah Nomor : 000.1.5/1517/Bappeda-IV/2026 Tanggal 21 Juli 2026 tentang Peningkatan Kapasitas dalam Rangka Pembangunan Rendah Karbon Daerah di Provinsi Sumatera Selatan.', $data['dasar_kedua'] ?? '-');
-            $xml = $this->fillSuratTugasPegawai($xml, $data['pegawai_berangkat'] ?? '');
+            $xml = $this->fillSuratTugasPegawai($xml, is_array($data['pegawai_berangkat'] ?? null) ? $data['pegawai_berangkat'] : []);
             $xml = $this->replaceWordText($xml, 'Menghadiri Kegiatan Peningkatan Kapasitas dalam Rangka Pembangunan Rendah Karbon Daerah di Provinsi Sumatera Selatan', $data['kegiatan'] ?? '-');
             // Tujuan perjalanan and keterangan span two paragraphs inside one table cell with no
             // separator between them, so address the cell directly instead of matching literal text.
@@ -796,23 +848,119 @@ class SuratTemplateService
         return preg_replace('/<w:color[^>]*w:val="(?:FF0000|F79646)"[^>]*\/>/i', '', $xml) ?? $xml;
     }
 
-    private function fillSuratTugasPegawai(string $xml, string $rawPegawai): string
+    /**
+     * The "Yang Bepergian" table has a fixed 2-person layout: person #1's Nama row
+     * (0) also carries the section label, then NIP/Pangkat/Jabatan (1-3) and a spacer
+     * (4); person #2 repeats that same Nama/NIP/Pangkat/Jabatan/spacer shape in rows
+     * 5-9. That second block is also the reusable unit for any 3rd+ traveler: clone
+     * it, relabel its "2. Nama" to "N. Nama", and insert it after the previous block
+     * — so the form (and this template) aren't capped at two people. If there's only
+     * one traveler, the unused person #2 block is removed rather than left showing
+     * placeholder dashes.
+     *
+     * @param  list<array{nama?: string, nip?: string, pangkat?: string, jabatan?: string}>  $pegawaiList
+     */
+    private function fillSuratTugasPegawai(string $xml, array $pegawaiList): string
     {
-        $pegawai = $this->parsePegawaiBerangkat($rawPegawai);
-        $defaults = [
-            ['Muhammad Kangau Rizki Akbar, S.Hut', '19990906202521 1 021', 'Penata Muda/IX', 'Penata Layanan Operasional'],
-            ['Vika Kusumaningrum', '19910207202521 2 044', 'Pengatur Muda/V', 'Pengadministrasi Perkantoran'],
-        ];
+        $pegawaiList = array_values($pegawaiList);
 
-        foreach ($defaults as $index => [$nama, $nip, $pangkat, $jabatan]) {
-            $item = $pegawai[$index] ?? ['nama' => '-', 'nip' => '-', 'pangkat' => '-', 'jabatan' => '-'];
-            $xml = $this->replaceWordText($xml, $nama, $item['nama']);
-            $xml = $this->replaceWordText($xml, $nip, $item['nip']);
-            $xml = $this->replaceWordText($xml, $pangkat, $item['pangkat']);
-            $xml = $this->replaceWordText($xml, $jabatan, $item['jabatan']);
+        if (empty($pegawaiList)) {
+            return $xml;
         }
 
-        return $xml;
+        $dom = new \DOMDocument;
+        $previous = libxml_use_internal_errors(true);
+        $loaded = $dom->loadXML($xml);
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+
+        if (! $loaded) {
+            return $xml;
+        }
+
+        $xpath = new \DOMXPath($dom);
+        $xpath->registerNamespace('w', 'http://schemas.openxmlformats.org/wordprocessingml/2006/main');
+        $table = $xpath->query('(//w:tbl)[3]')->item(0);
+        $rows = $table ? iterator_to_array($xpath->query('w:tr', $table)) : [];
+
+        if (count($rows) < 10) {
+            return $xml;
+        }
+
+        $this->fillPegawaiRow($xpath, $rows[0], $pegawaiList[0]['nama'] ?? '-');
+        $this->fillPegawaiRow($xpath, $rows[1], $pegawaiList[0]['nip'] ?? '-');
+        $this->fillPegawaiRow($xpath, $rows[2], $pegawaiList[0]['pangkat'] ?? '-');
+        $this->fillPegawaiRow($xpath, $rows[3], $pegawaiList[0]['jabatan'] ?? '-');
+
+        // Clone the person #2 block before touching it, so it's still available as a
+        // template for the 3rd+ traveler even if it ends up being removed below.
+        $blockTemplate = array_map(fn (\DOMNode $row) => $row->cloneNode(true), array_slice($rows, 5, 5));
+        // Anchor new rows after person #1's spacer (row 4) — not one of the rows
+        // being removed next, which would otherwise leave us holding a detached
+        // node with no parentNode to insert relative to.
+        $insertAfter = $rows[4];
+
+        foreach (array_slice($rows, 5, 5) as $row) {
+            $row->parentNode->removeChild($row);
+        }
+
+        foreach (array_slice($pegawaiList, 1) as $index => $pegawai) {
+            $block = array_map(fn (\DOMNode $row) => $row->cloneNode(true), $blockTemplate);
+            $this->relabelPegawaiRow($xpath, $block[0], ($index + 2).'. Nama');
+            $this->fillPegawaiRow($xpath, $block[0], $pegawai['nama'] ?? '-');
+            $this->fillPegawaiRow($xpath, $block[1], $pegawai['nip'] ?? '-');
+            $this->fillPegawaiRow($xpath, $block[2], $pegawai['pangkat'] ?? '-');
+            $this->fillPegawaiRow($xpath, $block[3], $pegawai['jabatan'] ?? '-');
+
+            foreach ($block as $row) {
+                $insertAfter->parentNode->insertBefore($row, $insertAfter->nextSibling);
+                $insertAfter = $row;
+            }
+        }
+
+        return $dom->saveXML() ?: $xml;
+    }
+
+    /** Fills the last (value) cell of a Yang Bepergian row: Nama/NIP/Pangkat/Jabatan. */
+    private function fillPegawaiRow(\DOMXPath $xpath, \DOMNode $row, string $value): void
+    {
+        $cells = $xpath->query('w:tc', $row);
+        $cell = $cells->item($cells->length - 1);
+
+        if (! $cell) {
+            return;
+        }
+
+        $textNodes = $xpath->query('.//w:t', $cell);
+
+        if (! $textNodes || $textNodes->length === 0) {
+            return;
+        }
+
+        $textNodes->item(0)->nodeValue = $value;
+
+        for ($i = 1; $i < $textNodes->length; $i++) {
+            $textNodes->item($i)->nodeValue = '';
+        }
+
+        $this->clearPlaceholderColor($xpath, $cell);
+    }
+
+    /** Rewrites the "N. Nama" label cell (3rd cell) of a cloned person block. */
+    private function relabelPegawaiRow(\DOMXPath $xpath, \DOMNode $row, string $label): void
+    {
+        $cell = $xpath->query('w:tc', $row)->item(2);
+        $textNodes = $cell ? $xpath->query('.//w:t', $cell) : null;
+
+        if (! $textNodes || $textNodes->length === 0) {
+            return;
+        }
+
+        $textNodes->item(0)->nodeValue = $label;
+
+        for ($i = 1; $i < $textNodes->length; $i++) {
+            $textNodes->item($i)->nodeValue = '';
+        }
     }
 
     private function notaDinasTitle(array $data, string $bulan, string $tahun): string
@@ -844,24 +992,6 @@ class SuratTemplateService
         ]);
     }
 
-    private function parsePegawaiBerangkat(string $raw): array
-    {
-        return collect(preg_split('/\R+/', trim($raw)) ?: [])
-            ->filter()
-            ->map(function (string $line): array {
-                $line = trim(preg_replace('/^\d+\.\s*/', '', $line) ?? $line);
-                $parts = array_values(array_filter(array_map('trim', preg_split('/\s+-\s+/', $line) ?: [])));
-
-                return [
-                    'nama' => $parts[0] ?? $line,
-                    'nip' => preg_replace('/^NIP\.?\s*/i', '', $parts[1] ?? '-'),
-                    'pangkat' => $parts[2] ?? '-',
-                    'jabatan' => $parts[3] ?? '-',
-                ];
-            })
-            ->values()
-            ->all();
-    }
 
     private function fillNotaDinasTables(string $xml, array $data): string
     {

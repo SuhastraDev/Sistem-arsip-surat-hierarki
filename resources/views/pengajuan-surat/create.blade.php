@@ -184,6 +184,17 @@ $oldFields = old('fields', []);
                         </div>`;
                 }
 
+                if (field.type === 'people') {
+                    return `${groupHeader}
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">${field.label} ${requiredMark}</label>
+                            <div class="people-repeater" data-name="${name}" data-item-fields='${JSON.stringify(field.item_fields || {})}'></div>
+                            <button type="button" class="btn btn-sm btn-outline-primary mt-1 add-person-btn" data-target="${name}">
+                                <i class="fas fa-plus me-1"></i>Tambah Orang
+                            </button>
+                        </div>`;
+                }
+
                 if (field.type === 'select') {
                     const options = (field.options || []).map(option => {
                         const safeOption = escapeHtml(option);
@@ -253,7 +264,73 @@ $oldFields = old('fields', []);
             if (slug === 'surat-tugas') {
                 bindSuratTugasCalculator();
             }
+
+            panel.querySelectorAll('.people-repeater').forEach(initPeopleRepeater);
         }
+
+        function initPeopleRepeater(container) {
+            const name = container.dataset.name;
+            const itemFields = JSON.parse(container.dataset.itemFields || '{}');
+            const existing = Array.isArray(oldFields[name]) ? oldFields[name] : null;
+            const rows = (existing && existing.length ? existing : [{}]);
+
+            rows.forEach(row => addPersonRow(container, name, itemFields, row));
+        }
+
+        function addPersonRow(container, name, itemFields, values) {
+            values = values || {};
+            const index = container.children.length;
+            const row = document.createElement('div');
+            row.className = 'person-row border rounded p-3 mb-2';
+
+            const inputs = Object.entries(itemFields).map(([itemKey, itemField]) => `
+                <div class="col-md-6">
+                    <label class="form-label small text-muted mb-1">${escapeHtml(itemField.label || itemKey)}</label>
+                    <input type="text" name="fields[${name}][${index}][${itemKey}]" class="form-control form-control-sm" value="${escapeHtml(values[itemKey] || '')}" placeholder="${escapeHtml(itemField.placeholder || '')}">
+                </div>`).join('');
+
+            row.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <strong class="small text-uppercase text-muted person-row-title">Orang ke-${index + 1}</strong>
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-person-btn"><i class="fas fa-trash"></i></button>
+                </div>
+                <div class="row g-2">${inputs}</div>`;
+
+            container.appendChild(row);
+        }
+
+        function renumberPersonRows(container, name) {
+            Array.from(container.children).forEach((row, index) => {
+                row.querySelector('.person-row-title').textContent = `Orang ke-${index + 1}`;
+                row.querySelectorAll('input[name]').forEach(input => {
+                    input.name = input.name.replace(/\[\d+\]/, `[${index}]`);
+                });
+            });
+        }
+
+        panel.addEventListener('click', function(event) {
+            const addBtn = event.target.closest('.add-person-btn');
+
+            if (addBtn) {
+                const container = panel.querySelector(`.people-repeater[data-name="${addBtn.dataset.target}"]`);
+                const itemFields = JSON.parse(container.dataset.itemFields || '{}');
+                addPersonRow(container, addBtn.dataset.target, itemFields, {});
+                return;
+            }
+
+            const removeBtn = event.target.closest('.remove-person-btn');
+
+            if (removeBtn) {
+                const container = removeBtn.closest('.people-repeater');
+
+                if (container.children.length <= 1) {
+                    return;
+                }
+
+                removeBtn.closest('.person-row').remove();
+                renumberPersonRows(container, container.dataset.name);
+            }
+        });
 
         function bindCutiCalculator() {
             const startInput = panel.querySelector('[name="fields[tanggal_mulai]"]');
