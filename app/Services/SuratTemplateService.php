@@ -975,6 +975,22 @@ class SuratTemplateService
 
             $this->clearPlaceholderColor($xpath, $cellNode);
 
+            // A cell holding a multi-line placeholder (e.g. a numbered list with each
+            // line as its own paragraph) now has every line but the first emptied out.
+            // Drop those now-empty paragraphs instead of leaving blank/orphaned list
+            // markers ("2.", "3." with nothing after them) behind.
+            $keepParagraph = $textNodes->item(0)->parentNode;
+
+            while ($keepParagraph && $keepParagraph->localName !== 'p') {
+                $keepParagraph = $keepParagraph->parentNode;
+            }
+
+            foreach (iterator_to_array($xpath->query('.//w:p', $cellNode)) as $paragraph) {
+                if ($paragraph !== $keepParagraph) {
+                    $paragraph->parentNode->removeChild($paragraph);
+                }
+            }
+
             return $dom->saveXML() ?: $xml;
         }
 
@@ -1150,10 +1166,51 @@ class SuratTemplateService
                 $paragraph->appendChild($dom->importNode($child, true));
             }
 
+            // The QR image makes this paragraph noticeably taller. If its table row can
+            // split across a page break, Word may leave the QR/name on one page and the
+            // NIP line right after it on the next — keep the whole row together instead.
+            $this->preventTableRowSplit($dom, $paragraph);
+
             return $dom->saveXML() ?: null;
         }
 
         return null;
+    }
+
+    private function preventTableRowSplit(\DOMDocument $dom, \DOMNode $node): void
+    {
+        $row = $node;
+
+        while ($row && $row->localName !== 'tr') {
+            $row = $row->parentNode;
+        }
+
+        if (! $row) {
+            return;
+        }
+
+        $namespace = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+        $trPr = null;
+
+        foreach ($row->childNodes as $child) {
+            if ($child->localName === 'trPr') {
+                $trPr = $child;
+                break;
+            }
+        }
+
+        if (! $trPr) {
+            $trPr = $dom->createElementNS($namespace, 'w:trPr');
+            $row->insertBefore($trPr, $row->firstChild);
+        }
+
+        foreach ($trPr->childNodes as $child) {
+            if ($child->localName === 'cantSplit') {
+                return;
+            }
+        }
+
+        $trPr->appendChild($dom->createElementNS($namespace, 'w:cantSplit'));
     }
 
     private function docxSignatureRuns(PengajuanSurat $pengajuanSurat): string
@@ -1260,7 +1317,9 @@ class SuratTemplateService
 
     private function docxQrDrawingRun(string $relationshipId): string
     {
-        $extent = 914400;
+        // Signature cells are small; a full 1" image (914400 EMU) grows the row tall
+        // enough to overflow the page and get split away from the rest of the block.
+        $extent = 640080; // ~0.7"
 
         return '<w:r><w:drawing><wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" distT="0" distB="0" distL="0" distR="0"><wp:extent cx="'.$extent.'" cy="'.$extent.'"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:docPr id="1" name="QR Verifikasi"/><wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="0" name="QR Verifikasi"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="'.$relationshipId.'"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'.$extent.'" cy="'.$extent.'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>';
     }
