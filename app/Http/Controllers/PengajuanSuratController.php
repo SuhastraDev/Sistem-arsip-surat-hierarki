@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\DigitalSignatureService;
 use App\Services\PengajuanApprovalService;
 use App\Services\SuratTemplateService;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -120,10 +121,9 @@ class PengajuanSuratController extends Controller
                 ->with('error', 'Akun Anda belum memiliki jalur atasan untuk pengajuan. Hubungi Admin.');
         }
 
-        $pengajuanSurat = PengajuanSurat::create([
+        $pengajuanSurat = $this->createPengajuanSuratWithUniqueNomor([
             'jenis_surat_id' => $baseData['jenis_surat_id'],
             'pemohon_id' => Auth::id(),
-            'nomor_pengajuan' => $this->generateNomorPengajuan(),
             'tanggal_pengajuan' => $baseData['tanggal_pengajuan'],
             'perihal' => $baseData['perihal'],
             'status' => 'diajukan',
@@ -648,32 +648,83 @@ class PengajuanSuratController extends Controller
         return $startDate->diff($endDate)->days + 1;
     }
 
+    /**
+     * Counting today's rows to pick the next nomor_pengajuan breaks as soon as any
+     * row for today is deleted (a supported action — see canDeleteOwnDraftOrSubmittedPengajuan):
+     * the count drops, and the next submission recomputes a number that was already
+     * issued earlier today, violating the unique constraint. Retry with a freshly
+     * generated number on that specific collision instead of surfacing a 500.
+     */
+    private function createPengajuanSuratWithUniqueNomor(array $attributes): PengajuanSurat
+    {
+        $attempts = 0;
+
+        while (true) {
+            $attempts++;
+
+            try {
+                return PengajuanSurat::create([
+                    'nomor_pengajuan' => $this->generateNomorPengajuan(),
+                    ...$attributes,
+                ]);
+            } catch (QueryException $exception) {
+                $isDuplicateNomor = $exception->getCode() === '23000'
+                    && str_contains($exception->getMessage(), 'pengajuan_surats_nomor_pengajuan_unique');
+
+                if (! $isDuplicateNomor || $attempts >= 5) {
+                    throw $exception;
+                }
+            }
+        }
+    }
+
     private function generateNomorPengajuan(): string
     {
         $prefix = 'PGJ-'.now()->format('Ymd');
-        $countToday = PengajuanSurat::whereDate('created_at', now()->toDateString())->count() + 1;
+        $lastSequence = PengajuanSurat::whereDate('created_at', now()->toDateString())
+            ->where('nomor_pengajuan', 'like', $prefix.'-%')
+            ->orderByDesc('nomor_pengajuan')
+            ->value('nomor_pengajuan');
+        $nextSequence = $lastSequence ? ((int) substr($lastSequence, -4)) + 1 : 1;
 
-        return $prefix.'-'.str_pad((string) $countToday, 4, '0', STR_PAD_LEFT);
+        return $prefix.'-'.str_pad((string) $nextSequence, 4, '0', STR_PAD_LEFT);
     }
 
     private function generateNomorNotaDinas(): string
     {
         $year = now()->format('Y');
-        $countThisYear = PengajuanSurat::whereHas('jenisSurat', fn ($query) => $query->where('slug', 'nota-dinas'))
-            ->whereYear('created_at', $year)
-            ->count() + 1;
+        $nextSequence = $this->nextNomorSequence('nota-dinas', 'nomor_nota', $year);
 
-        return '500.0.0.0/'.str_pad((string) $countThisYear, 3, '0', STR_PAD_LEFT).'/ND.DISHUT/I/'.$year;
+        return '500.0.0.0/'.str_pad((string) $nextSequence, 3, '0', STR_PAD_LEFT).'/ND.DISHUT/I/'.$year;
+    }
+
+    /**
+     * Counting this year's rows and adding 1 breaks as soon as any row is deleted
+     * (a supported action for draft/diajukan pengajuan): the count drops, and the
+     * next generated nomor collides with one already printed on an earlier letter.
+     * Base it on the highest sequence actually used this year instead.
+     */
+    private function nextNomorSequence(string $slug, string $fieldKey, string $year): int
+    {
+        $maxSequence = PengajuanSurat::whereHas('jenisSurat', fn ($query) => $query->where('slug', $slug))
+            ->whereYear('created_at', $year)
+            ->get()
+            ->reduce(function (int $max, PengajuanSurat $pengajuan) use ($fieldKey): int {
+                $nomor = $pengajuan->metadata['form_data'][$fieldKey] ?? '';
+                preg_match('/(\d+)(?=\D*$)/', (string) $nomor, $matches);
+
+                return max($max, (int) ($matches[1] ?? 0));
+            }, 0);
+
+        return $maxSequence + 1;
     }
 
     private function generateNomorSuratTugas(): string
     {
         $year = now()->format('Y');
-        $countThisYear = PengajuanSurat::whereHas('jenisSurat', fn ($query) => $query->where('slug', 'surat-tugas'))
-            ->whereYear('created_at', $year)
-            ->count() + 1;
+        $nextSequence = $this->nextNomorSequence('surat-tugas', 'nomor_surat', $year);
 
-        return '800.1.11.1/'.str_pad((string) $countThisYear, 3, '0', STR_PAD_LEFT).'/ST/Dishut.III/'.$year;
+        return '800.1.11.1/'.str_pad((string) $nextSequence, 3, '0', STR_PAD_LEFT).'/ST/Dishut.III/'.$year;
     }
 
     private function formatIndonesianDate(?string $date): string
