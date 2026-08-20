@@ -20,7 +20,7 @@ class SuratTemplateService
                 'title' => 'Surat Cuti',
                 'summary' => 'Mengikuti formulir permintaan dan pemberian cuti BKN yang disediakan.',
                 'template_label' => 'Surat Cuti.docx',
-                'template_docx' => 'Surat Cuti.docx',
+                'template_docx' => 'new surat cuti.docx',
                 'template_note' => 'Template resmi cuti: data pegawai, jenis cuti, alasan, alamat, dan pertimbangan atasan.',
                 'fields' => [
                     'nama_pegawai' => ['label' => 'Nama pegawai', 'type' => 'text', 'required' => true, 'readonly' => true, 'source' => 'user.name', 'placeholder' => 'Terisi otomatis dari akun'],
@@ -42,7 +42,7 @@ class SuratTemplateService
                 'title' => 'Surat Tugas',
                 'summary' => 'Mengikuti template Surat Perintah Tugas yang disediakan.',
                 'template_label' => 'Surat Tugas.doc',
-                'template_docx' => 'Surat Tugas.docx',
+                'template_docx' => 'new surat tugas.docx',
                 'template_note' => 'Template resmi SPT: dasar surat, daftar pegawai yang bepergian, kegiatan, tujuan perjalanan, lama perjalanan, dan penandatangan.',
                 'fields' => [
                     'nomor_surat' => ['label' => 'Nomor surat', 'type' => 'text', 'required' => true, 'readonly' => true, 'source' => 'surat_tugas.nomor_surat', 'placeholder' => 'Terisi otomatis oleh sistem'],
@@ -63,7 +63,7 @@ class SuratTemplateService
                 'title' => 'Nota Dinas',
                 'summary' => 'Mengikuti Template Nota Dinas IKK yang disediakan.',
                 'template_label' => 'Template Nota Dinas.docx',
-                'template_docx' => 'Template Nota Dinas.docx',
+                'template_docx' => 'new nota dinas.docx',
                 'template_note' => 'Template resmi nota dinas IKK: identitas nota, narasi laporan, tabel IKK utama, lampiran capaian deforestasi per UPTD KPH, total, dan tanda tangan Kabid.',
                 'fields' => $this->notaDinasFields(),
             ],
@@ -305,17 +305,10 @@ class SuratTemplateService
     public function pdfBinary(PengajuanSurat $pengajuanSurat): string
     {
         if ($this->usesOfficialTemplate($pengajuanSurat)) {
-            $pdf = $this->docxToPdfBinary($this->docxBinary($pengajuanSurat));
-
-            if (! $pdf) {
-                if (app()->environment('production')) {
-                    abort(503, 'PDF template belum bisa dibuat. Pastikan LibreOffice/soffice aktif di server.');
-                }
-
-                return $this->makeSimplePdf($pengajuanSurat);
-            }
-
-            return $pdf;
+            // Prefer a LibreOffice-rendered PDF (matches the DOCX layout exactly), but always
+            // fall back to the built-in renderer so downloads keep working — and keep carrying
+            // the signature/QR block — even on a server without soffice installed.
+            return $this->docxToPdfBinary($this->docxBinary($pengajuanSurat)) ?? $this->makeSimplePdf($pengajuanSurat);
         }
 
         return $this->makeSimplePdf($pengajuanSurat);
@@ -585,15 +578,17 @@ class SuratTemplateService
             $xml = $this->replaceWordText($xml, 'I Gusti Ayu Kusuma Wardani, S.Hut', $data['nama_pegawai'] ?? '-');
             $xml = $this->replaceWordText($xml, '199402012022032011', $data['nip'] ?? '-');
             $xml = $this->replaceWordText($xml, 'Polisi Kehutanan', $data['jabatan_unit'] ?? '-');
-            $xml = $this->replaceWordText($xml, '4 tahun', '-');
             $xml = $this->replaceWordText($xml, 'Bidang Perlindungan dan KSDAE', $data['unit_kerja'] ?? '-', 1);
             $xml = $this->replaceWordText($xml, 'Keperluan keluarga', $data['alasan'] ?? '-');
             $xml = $this->replaceWordText($xml, '1 HARI', strtoupper($data['lama_cuti'] ?? '-'));
             $xml = $this->replaceWordText($xml, '30 Maret 2026', $this->formatIndonesianLongDate($data['tanggal_mulai'] ?? null));
+            $xml = $this->replaceWordText($xml, '30 april 2026', $this->formatIndonesianLongDate($data['tanggal_selesai'] ?? null));
             $xml = $this->replaceWordText($xml, 'Lampung', $data['alamat_selama_cuti'] ?? '-');
             $xml = $this->replaceWordText($xml, '0813 7391 4100', $data['telepon'] ?? '-');
-            $xml = $this->replaceWordText($xml, 'Hormat Saya, I Gusti Ayu Kusuma Wardani, S.Hut NIP. 19940201 202203 2 011', "Hormat Saya,\n\n\n".($data['nama_pegawai'] ?? '-')."\nNIP. ".($data['nip'] ?? '-'));
-            $xml = $this->replaceWordText($xml, 'Plh. Kepala Seksi Pengendalian Kerusakan dan Pengamanan Hutan, Ferry Yurisman, S.P NIP. 19730228 199003 1 009', $data['atasan_langsung'] ?? '-');
+
+            // Pemohon signature block: name and NIP sit as separate lines directly below the phone number.
+            $xml = $this->replaceWordText($xml, 'I Gusti Ayu Kusuma Wardani, S.Hut', $data['nama_pegawai'] ?? '-');
+            $xml = $this->replaceWordText($xml, 'NIP. 19940201 202203 2 011', 'NIP. '.($data['nip'] ?? '-'));
 
             if ($pengajuanSurat->digitalSignature) {
                 $xml = $this->replaceWordTextWithSignatureBlock($xml, 'Dr. Syafrul Yunardy, S.Hut., M.E.', $pengajuanSurat);
@@ -607,19 +602,21 @@ class SuratTemplateService
     {
         return $this->makeTemplateDocx($pengajuanSurat, 'surat-tugas', function (string $xml, array $data, PengajuanSurat $pengajuanSurat): string {
             $xml = $this->replaceWordText($xml, '800.1.11.1/         /ST/Dishut.III/2026', $data['nomor_surat'] ?? '-');
-            $xml = $this->replaceWordText($xml, 'Tanggal : Juli 2026', 'Tanggal'."\t\t".': '.$this->formatIndonesianLongDate($pengajuanSurat->tanggal_pengajuan->toDateString()));
+            $xml = $this->replaceWordText($xml, 'Tanggal: Juli 2026', 'Tanggal'."\t\t".': '.$this->formatIndonesianLongDate($pengajuanSurat->tanggal_pengajuan->toDateString()));
             $xml = $this->replaceWordText($xml, 'Peraturan Gubernur Sumatera Selatan Nomor: 48 Tahun 2016 tentang Susunan Organisasi, Uraian Tugas dan Fungsi Dinas Kehutanan Provinsi Sumatera Selatan.', $data['dasar_pertama'] ?? '-');
             $xml = $this->replaceWordText($xml, 'Surat Kepala Badan Perencanaan Pembangunan Daerah Nomor : 000.1.5/1517/Bappeda-IV/2026 Tanggal 21 Juli 2026 tentang Peningkatan Kapasitas dalam Rangka Pembangunan Rendah Karbon Daerah di Provinsi Sumatera Selatan.', $data['dasar_kedua'] ?? '-');
             $xml = $this->fillSuratTugasPegawai($xml, $data['pegawai_berangkat'] ?? '');
             $xml = $this->replaceWordText($xml, 'Menghadiri Kegiatan Peningkatan Kapasitas dalam Rangka Pembangunan Rendah Karbon Daerah di Provinsi Sumatera Selatan', $data['kegiatan'] ?? '-');
-            $xml = $this->replaceWordText($xml, 'Aston Pallembang Hotel & Conference Center Jl. Jend. Basuki Rachmat o.189, Talang Aman, Kec. Kemuning, Kota Palembang, Sumatera Selatan 30126', $data['tujuan_perjalanan'] ?? '-');
+            // Tujuan perjalanan and keterangan span two paragraphs inside one table cell with no
+            // separator between them, so address the cell directly instead of matching literal text.
+            $xml = $this->replaceTableCellText($xml, 4, 2, 3, $data['tujuan_perjalanan'] ?? '-');
             $xml = $this->replaceWordText($xml, '5 (lima) hari / 27-31 Juli 2026', $data['lama_perjalanan'] ?? '-');
-            $xml = $this->replaceWordText($xml, 'Biaya yang timbul dari kegiatan tersebut dibebankan pada Badan Perencanaan Pembangunan Daerah. Membuat Laporan tertulis hasil pelaksanaan tugas tersebut 1 (satu) minggu setelah pelaksanaan tugas kepada Kepala Dinas Kehutanan Provinsi Sumatera Selatan.', trim(($data['keterangan_biaya'] ?? '')."\n".($data['kewajiban_laporan'] ?? '')) ?: '-');
+            $xml = $this->replaceTableCellText($xml, 4, 4, 3, trim(($data['keterangan_biaya'] ?? '').' '.($data['kewajiban_laporan'] ?? '')) ?: '-');
 
             if ($pengajuanSurat->digitalSignature) {
-                $xml = $this->replaceWordTextWithSignatureBlock($xml, 'SUSILO HARTONO, S.Hut., M.Si', $pengajuanSurat);
+                $xml = $this->replaceWordTextWithSignatureBlock($xml, 'Dr. SYAFRUL YUNARDY, S.Hut.,M.E', $pengajuanSurat);
             } elseif (! empty($data['penandatangan'])) {
-                $xml = $this->replaceWordText($xml, 'SUSILO HARTONO, S.Hut., M.Si', $data['penandatangan']);
+                $xml = $this->replaceWordText($xml, 'Dr. SYAFRUL YUNARDY, S.Hut.,M.E', $data['penandatangan']);
             }
 
             return $xml;
@@ -989,10 +986,21 @@ class SuratTemplateService
 
         $xpath = new \DOMXPath($dom);
         $xpath->registerNamespace('w', 'http://schemas.openxmlformats.org/wordprocessingml/2006/main');
+
+        // Prefer the most specific container (a single paragraph) so a match confined
+        // to one paragraph inside a multi-paragraph table cell doesn't wipe its siblings.
+        // Only fall back to whole-cell matching for text that spans multiple paragraphs.
+        return $this->replaceWordTextInNodes($dom, $xpath, '//w:p', $search, $replacement, $occurrence)
+            ?? $this->replaceWordTextInNodes($dom, $xpath, '//w:tc', $search, $replacement, $occurrence)
+            ?? $xml;
+    }
+
+    private function replaceWordTextInNodes(\DOMDocument $dom, \DOMXPath $xpath, string $query, string $search, string $replacement, ?int $occurrence): ?string
+    {
         $searchText = $this->normalizeWordText($search);
         $found = 0;
 
-        foreach ($xpath->query('//w:p|//w:tc') as $container) {
+        foreach ($xpath->query($query) as $container) {
             $textNodes = $xpath->query('.//w:t', $container);
 
             if (! $textNodes || $textNodes->length === 0) {
@@ -1040,10 +1048,10 @@ class SuratTemplateService
                 $textNodes->item($i)->nodeValue = '';
             }
 
-            return $dom->saveXML() ?: $xml;
+            return $dom->saveXML() ?: null;
         }
 
-        return $xml;
+        return null;
     }
 
     private function replaceWordTextWithSignatureBlock(string $xml, string $search, PengajuanSurat $pengajuanSurat): string
@@ -1060,9 +1068,20 @@ class SuratTemplateService
 
         $xpath = new \DOMXPath($dom);
         $xpath->registerNamespace('w', 'http://schemas.openxmlformats.org/wordprocessingml/2006/main');
+
+        // Prefer the most specific paragraph over its ancestor table cell so a
+        // multi-paragraph signature cell (heading / name / NIP as separate lines)
+        // only has its matching name line swapped, not the whole cell wiped.
+        return $this->replaceWordTextWithSignatureBlockInNodes($dom, $xpath, '//w:p', $search, $pengajuanSurat)
+            ?? $this->replaceWordTextWithSignatureBlockInNodes($dom, $xpath, '//w:tc', $search, $pengajuanSurat)
+            ?? $xml;
+    }
+
+    private function replaceWordTextWithSignatureBlockInNodes(\DOMDocument $dom, \DOMXPath $xpath, string $query, string $search, PengajuanSurat $pengajuanSurat): ?string
+    {
         $searchText = $this->normalizeWordText($search);
 
-        foreach ($xpath->query('//w:p|//w:tc') as $container) {
+        foreach ($xpath->query($query) as $container) {
             $textNodes = $xpath->query('.//w:t', $container);
 
             if (! $textNodes || $textNodes->length === 0) {
@@ -1084,7 +1103,7 @@ class SuratTemplateService
                 : $xpath->query('.//w:p', $container)->item(0);
 
             if (! $paragraph) {
-                return $xml;
+                return null;
             }
 
             foreach (iterator_to_array($paragraph->childNodes) as $child) {
@@ -1100,10 +1119,10 @@ class SuratTemplateService
                 $paragraph->appendChild($dom->importNode($child, true));
             }
 
-            return $dom->saveXML() ?: $xml;
+            return $dom->saveXML() ?: null;
         }
 
-        return $xml;
+        return null;
     }
 
     private function docxSignatureRuns(PengajuanSurat $pengajuanSurat): string
