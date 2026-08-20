@@ -1166,7 +1166,7 @@ class SuratTemplateService
         );
     }
 
-    private function addSignatureQrImage(ZipArchive $zip, PengajuanSurat $pengajuanSurat): string
+    private function addSignatureQrImage(ZipArchive $zip, PengajuanSurat $pengajuanSurat, bool $ensureContentType = true): string
     {
         $signature = $pengajuanSurat->digitalSignature;
         $relationshipId = $this->nextDocumentRelationshipId($zip);
@@ -1175,7 +1175,11 @@ class SuratTemplateService
         $payload = route('verification.show', $signature->verification_code);
 
         $zip->addFromString('word/'.$target, $this->qrCodeService->png($payload, 4, 4));
-        $this->ensurePngContentType($zip);
+
+        if ($ensureContentType) {
+            $this->ensurePngContentType($zip);
+        }
+
         $this->addDocumentRelationship($zip, $relationshipId, $target);
 
         return $relationshipId;
@@ -1391,7 +1395,12 @@ class SuratTemplateService
         $zip->addFromString('word/_rels/document.xml.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>');
 
         if ($pengajuanSurat?->digitalSignature && str_contains($body, $this->qrCodeService->marker())) {
-            $relationshipId = $this->addSignatureQrImage($zip, $pengajuanSurat);
+            // Content types above already declare the png Default. Don't let addSignatureQrImage
+            // re-read '[Content_Types].xml' to patch it in: ZipArchive can't read back an entry
+            // added via addFromString in this same not-yet-closed archive, so that read silently
+            // falls back to an empty Types shell and overwrites the real one — corrupting the
+            // package (LibreOffice then refuses to open it) even though Word tolerates it.
+            $relationshipId = $this->addSignatureQrImage($zip, $pengajuanSurat, ensureContentType: false);
             $body = str_replace(
                 '<w:t xml:space="preserve">'.$this->qrCodeService->marker().'</w:t>',
                 $this->docxQrDrawingRun($relationshipId),
