@@ -589,7 +589,7 @@ class PengajuanSuratPhaseOneTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_kabid_uses_pengajuan_workspace_instead_of_legacy_surat_modules(): void
+    public function test_kabid_uses_pengajuan_workspace(): void
     {
         $this->seed();
 
@@ -601,21 +601,9 @@ class PengajuanSuratPhaseOneTest extends TestCase
             ->assertSee('Approval Kabid')
             ->assertDontSee('Monitoring Surat Masuk')
             ->assertDontSee('Surat Keluar');
-
-        $this->actingAs($kabid)
-            ->get(route('surat-masuk.index'))
-            ->assertForbidden();
-
-        $this->actingAs($kabid)
-            ->get(route('surat-keluar.index'))
-            ->assertForbidden();
-
-        $this->actingAs($kabid)
-            ->get(route('disposisi.index'))
-            ->assertForbidden();
     }
 
-    public function test_staff_uses_pengajuan_workspace_instead_of_legacy_surat_modules(): void
+    public function test_staff_uses_pengajuan_workspace(): void
     {
         $this->seed();
 
@@ -627,18 +615,6 @@ class PengajuanSuratPhaseOneTest extends TestCase
             ->assertSee('Pengajuan Saya')
             ->assertDontSee('Kotak Masuk Saya')
             ->assertDontSee('Surat Keluar');
-
-        $this->actingAs($staff)
-            ->get(route('surat-masuk.index'))
-            ->assertForbidden();
-
-        $this->actingAs($staff)
-            ->get(route('surat-keluar.index'))
-            ->assertForbidden();
-
-        $this->actingAs($staff)
-            ->get(route('disposisi.index'))
-            ->assertForbidden();
     }
 
     public function test_staff_can_view_pengajuan_create_form(): void

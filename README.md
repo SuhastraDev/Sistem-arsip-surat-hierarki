@@ -1,6 +1,8 @@
 # 📋 Sistem E-Arsip Surat Hierarki
 
-Aplikasi **E-Arsip Surat** untuk mengelola **Surat Masuk**, **Surat Keluar**, dan **Pengajuan Surat** (Cuti, Tugas, Nota Dinas, Undangan Rapat) dengan alur kerja **hierarki jabatan** (Kabid → Kasi → Staff), **disposisi berjenjang multi-target**, **tanda tangan digital** dengan verifikasi QR, dan **monitoring status posisi surat** secara real-time.
+Aplikasi **E-Arsip Surat** untuk mengelola **Pengajuan Surat** (Cuti, Tugas, Nota Dinas, Undangan Rapat) dengan alur kerja **hierarki jabatan** (Staff → Kasi → Kabid), **approval berjenjang**, **tanda tangan digital** dengan verifikasi QR, dan **monitoring status posisi surat** secara real-time.
+
+> ℹ️ Modul lama **Surat Masuk / Surat Keluar / Disposisi** sudah **dihapus** dari sistem ini dan sepenuhnya digantikan oleh modul **Pengajuan Surat**.
 
 ---
 
@@ -23,7 +25,7 @@ Aplikasi **E-Arsip Surat** untuk mengelola **Surat Masuk**, **Surat Keluar**, da
 
 Sistem ini dirancang untuk kebutuhan pengarsipan surat digital di lingkungan instansi pemerintahan atau organisasi, dengan penekanan pada:
 
--   ✅ **Hierarki atasan–bawahan** untuk alur disposisi dan approval yang realistis dan terkontrol
+-   ✅ **Hierarki atasan–bawahan** untuk alur approval yang realistis dan terkontrol
 -   📊 **Tracking progres** real-time untuk monitoring status surat
 -   ✔️ **Validasi berjenjang** dengan approval multi-level
 -   🔏 **Tanda tangan digital** (RSA-2048/SHA-512) yang dapat diverifikasi publik lewat kode atau QR code
@@ -32,21 +34,6 @@ Sistem ini dirancang untuk kebutuhan pengarsipan surat digital di lingkungan ins
 ---
 
 ## ✨ Fitur Utama
-
-### 📥 Manajemen Surat Masuk
-
--   Input metadata surat dengan upload dokumen PDF/DOC/DOCX
--   Disposisi berjenjang: Kabid → Kasi → Staff
--   Tracking status: Menunggu Disposisi / Di Meja Kabid/Kasi/Staff / Selesai
--   Wajib baca sebelum disposisi (read tracking)
--   Multi-target disposisi (bisa kirim ke beberapa penerima sekaligus)
-
-### 📤 Manajemen Surat Keluar
-
--   Upload draft dari Staff dengan validasi bertingkat
--   Review Kasi → Review Kabid (ACC final)
--   Opsi keputusan: ACC / Revisi / Tolak dengan catatan
--   Notifikasi otomatis untuk setiap perubahan status
 
 ### 📝 Pengajuan Surat (Cuti, Tugas, Nota Dinas, Undangan Rapat)
 
@@ -73,13 +60,13 @@ Sistem ini dirancang untuk kebutuhan pengarsipan surat digital di lingkungan ins
 ### 🌳 Hierarki Organisasi
 
 -   Struktur parent-child (Kabid → Kasi → Staff)
--   List penerima disposisi/approval otomatis sesuai bawahan langsung
--   Validasi hierarki untuk mencegah disposisi atau approval tidak valid
+-   List penerima approval otomatis sesuai atasan langsung
+-   Validasi hierarki untuk mencegah approval tidak valid
 
 ### 🔍 Pencarian & Filter
 
 -   Filter berdasarkan tahun, bulan, status
--   Pencarian nomor surat, perihal, pengirim
+-   Pencarian nomor pengajuan, perihal, pemohon
 -   Active filter badges untuk UX yang lebih baik
 
 ### 📊 Dashboard & Statistik
@@ -92,61 +79,18 @@ Sistem ini dirancang untuk kebutuhan pengarsipan surat digital di lingkungan ins
 
 ## 👤 Role & Hak Akses
 
-| Role                         | Hak Akses Inti                                                                                                                                                                    |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Admin**                    | • Input surat masuk & upload dokumen<br>• Manajemen akun & role<br>• Kelola master jenis surat<br>• Monitoring semua proses surat<br>• Akses ke semua data sistem                    |
-| **Kabid**<br>(Kepala Bidang) | • Terima disposisi surat masuk<br>• Disposisi ke Kasi bawahan<br>• Validasi/ACC final surat keluar & pengajuan surat<br>• **Tanda tangan digital** dokumen final<br>• View riwayat keputusan |
-| **Kasi**<br>(Kepala Seksi)   | • Terima disposisi dari Kabid<br>• Disposisi ke Staff bawahan<br>• Review & validasi surat keluar / pengajuan surat dari Staff<br>• Monitoring tugas tim                             |
-| **Staff**<br>(Pelaksana)     | • Terima disposisi dari Kasi<br>• Tindaklanjut surat masuk<br>• Upload draft surat keluar<br>• Ajukan Surat Cuti/Tugas/Nota Dinas/Undangan<br>• Revisi surat yang ditolak            |
+| Role                         | Hak Akses Inti                                                                                                                                                     |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Admin**                    | • Manajemen akun & role pengguna<br>• Kelola master jenis surat<br>• Monitoring semua proses pengajuan surat<br>• Akses ke semua data sistem                       |
+| **Kabid**<br>(Kepala Bidang) | • Terima pengajuan yang sudah di-ACC Kasi<br>• Validasi/ACC final pengajuan surat<br>• **Tanda tangan digital** dokumen final<br>• View riwayat keputusan          |
+| **Kasi**<br>(Kepala Seksi)   | • Terima pengajuan dari Staff bawahan<br>• Periksa & ACC/Revisi/Tolak pengajuan sebelum diteruskan ke Kabid<br>• Monitoring tugas tim                              |
+| **Staff**<br>(Pelaksana)     | • Ajukan Surat Cuti/Tugas/Nota Dinas/Undangan<br>• Pantau posisi & status pengajuan<br>• Revisi pengajuan yang dikembalikan<br>• Unduh dokumen final bertanda tangan |
 
 ---
 
 ## 🔄 Alur Proses
 
-### 1️⃣ Surat Masuk (Top-Down)
-
-```mermaid
-graph TD
-    A[Admin Input Surat] --> B[Kabid Terima]
-    B --> C[Kabid Disposisi ke Kasi]
-    C --> D[Kasi Terima & Baca]
-    D --> E[Kasi Disposisi ke Staff]
-    E --> F[Staff Tindaklanjut]
-    F --> G[Status: Selesai]
-```
-
-**Detail Proses:**
-
-1. **Admin** input surat masuk + upload dokumen (PDF/DOC/DOCX)
-2. Sistem otomatis kirim ke **Kabid** dengan status "Menunggu Disposisi Kabid"
-3. **Kabid** wajib baca dulu, baru bisa **disposisi ke Kasi** (pilih 1 atau lebih Kasi)
-4. **Kasi** terima disposisi → wajib baca → **disposisi ke Staff** bawahan langsung
-5. **Staff** tindaklanjut → saat dibuka, status otomatis menjadi **"Selesai"**
-
-### 2️⃣ Surat Keluar (Bottom-Up)
-
-```mermaid
-graph TD
-    A[Staff Upload Draft] --> B[Status: Menunggu Kasi]
-    B --> C{Kasi Review}
-    C -->|ACC| D[Teruskan ke Kabid]
-    C -->|Revisi| E[Kembali ke Staff]
-    C -->|Tolak| F[Status: Ditolak]
-    D --> G{Kabid Review}
-    G -->|ACC| H[Status: Selesai/Arsip]
-    G -->|Revisi| E
-    G -->|Tolak| F
-```
-
-**Detail Proses:**
-
-1. **Staff** upload draft surat keluar (PDF/DOC/DOCX) + perihal
-2. **Kasi** review → opsi: **ACC** / **Revisi** / **Tolak** + catatan
-3. Jika ACC → diteruskan ke **Kabid**
-4. **Kabid** review → **ACC final** → surat menjadi arsip resmi
-5. Jika revisi/tolak → notifikasi ke Staff untuk perbaikan
-
-### 3️⃣ Pengajuan Surat & Tanda Tangan Digital (Bottom-Up)
+### Pengajuan Surat & Tanda Tangan Digital (Bottom-Up)
 
 ```mermaid
 graph TD
@@ -347,15 +291,6 @@ Seeder `UserSeeder` otomatis membuat akun demo berikut:
 
 ### Login Testing Flow
 
-**Surat Masuk/Keluar:**
-
-1. Login sebagai **Admin** → Input surat masuk
-2. Login sebagai **Kabid** → Disposisi ke Kasi
-3. Login sebagai **Kasi** → Disposisi ke Staff
-4. Login sebagai **Staff** → Baca & tindaklanjut
-
-**Pengajuan Surat + Tanda Tangan Digital:**
-
 1. Login sebagai **Staff** → Ajukan Surat Cuti/Tugas/Nota Dinas/Undangan
 2. Login sebagai **Kasi** → Periksa & ACC pengajuan
 3. Login sebagai **Kabid** → ACC final → **Tandatangani** dokumen
@@ -375,21 +310,7 @@ Seeder `UserSeeder` otomatis membuat akun demo berikut:
 
 ![Dashboard Admin](screenshots/dashboard_admin.png)
 
-### 📥 Daftar Surat Masuk
-
-![List Surat Masuk](screenshots/suratmasuk_list.png)
-
-### 🔍 Monitor Proses Surat (Admin)
-
-![Monitor Proses Surat](screenshots/Proses_surat.png)
-
-### 📤 Monitor Surat Keluar (Staff)
-
-![Monitor Surat Keluar](screenshots/suratkeluar_monitor.png)
-
-### ❌ Tolak Surat (Kabid)
-
-![Tolak Surat](screenshots/suratkeluar_kabid.png)
+> 📌 Screenshot alur Pengajuan Surat & Tanda Tangan Digital yang lebih baru menyusul — screenshot lama untuk modul Surat Masuk/Keluar yang sudah dihapus telah dibersihkan dari dokumentasi ini.
 
 ---
 

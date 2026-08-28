@@ -1,13 +1,10 @@
 <?php
 
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\DisposisiController;
 use App\Http\Controllers\JenisSuratController;
 use App\Http\Controllers\LaporanController;
 use App\Http\Controllers\PengajuanSuratController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\SuratKeluarController;
-use App\Http\Controllers\SuratMasukController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VerificationController;
 use Illuminate\Support\Facades\Route;
@@ -31,12 +28,6 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
 
     Route::get('/dashboard', [LaporanController::class, 'index'])->name('dashboard');
-    // Route arsip lama dibatasi ke aksi yang benar-benar masih punya handler.
-    Route::resource('surat-masuk', SuratMasukController::class)->only(['index', 'create', 'store', 'show']);
-    // Route Disposisi (Inbox & Proses)
-    Route::resource('disposisi', DisposisiController::class)->only(['index', 'show', 'update']);
-    // Route arsip lama dibatasi ke aksi yang benar-benar masih punya handler.
-    Route::resource('surat-keluar', SuratKeluarController::class)->only(['index', 'create', 'store', 'show', 'update']);
     Route::resource('jenis-surat', JenisSuratController::class)->except(['create', 'edit', 'show']);
     Route::post('pengajuan-surat/{pengajuan_surat}/process', [PengajuanSuratController::class, 'process'])->name('pengajuan-surat.process');
     Route::post('pengajuan-surat/{pengajuan_surat}/sign', [PengajuanSuratController::class, 'sign'])->name('pengajuan-surat.sign');
