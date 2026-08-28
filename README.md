@@ -1,6 +1,6 @@
 # 📋 Sistem E-Arsip Surat Hierarki
 
-Aplikasi **E-Arsip Surat** untuk mengelola **Surat Masuk** dan **Surat Keluar** dengan alur kerja **hierarki jabatan** (Kabid → Kasi → Staff), fitur **disposisi berjenjang multi-target**, dan **monitoring status posisi surat** secara real-time.
+Aplikasi **E-Arsip Surat** untuk mengelola **Surat Masuk**, **Surat Keluar**, dan **Pengajuan Surat** (Cuti, Tugas, Nota Dinas, Undangan Rapat) dengan alur kerja **hierarki jabatan** (Kabid → Kasi → Staff), **disposisi berjenjang multi-target**, **tanda tangan digital** dengan verifikasi QR, dan **monitoring status posisi surat** secara real-time.
 
 ---
 
@@ -23,9 +23,10 @@ Aplikasi **E-Arsip Surat** untuk mengelola **Surat Masuk** dan **Surat Keluar** 
 
 Sistem ini dirancang untuk kebutuhan pengarsipan surat digital di lingkungan instansi pemerintahan atau organisasi, dengan penekanan pada:
 
--   ✅ **Hierarki atasan–bawahan** untuk alur disposisi yang realistis dan terkontrol
+-   ✅ **Hierarki atasan–bawahan** untuk alur disposisi dan approval yang realistis dan terkontrol
 -   📊 **Tracking progres** real-time untuk monitoring status surat
 -   ✔️ **Validasi berjenjang** dengan approval multi-level
+-   🔏 **Tanda tangan digital** (RSA-2048/SHA-512) yang dapat diverifikasi publik lewat kode atau QR code
 -   🔒 **Role-based access control** untuk keamanan data
 
 ---
@@ -47,17 +48,33 @@ Sistem ini dirancang untuk kebutuhan pengarsipan surat digital di lingkungan ins
 -   Opsi keputusan: ACC / Revisi / Tolak dengan catatan
 -   Notifikasi otomatis untuk setiap perubahan status
 
+### 📝 Pengajuan Surat (Cuti, Tugas, Nota Dinas, Undangan Rapat)
+
+-   Staff mengajukan lewat form dinamis sesuai jenis surat (`Surat Cuti`, `Surat Tugas`, `Nota Dinas`, `Surat Undangan Rapat`)
+-   Alur approval berjenjang: **Staff ajukan → Kasi periksa/ACC/Revisi/Tolak → Kabid ACC final & tanda tangan**
+-   Perhitungan hari cuti otomatis **mengecualikan akhir pekan & hari libur nasional** (data hari libur diambil dari API publik)
+-   Dokumen final di-generate otomatis dalam format **PDF & DOCX** sesuai template resmi tiap jenis surat
+-   Riwayat lengkap setiap perubahan status untuk audit trail
+
+### 🔏 Tanda Tangan Digital & Verifikasi
+
+-   Kabid menandatangani dokumen final memakai kriptografi asimetris **RSA-2048 + hashing SHA-512**
+-   Setiap dokumen mendapat **kode verifikasi unik** (`ES-XXXXXXXXXX`) dan **QR code** yang ditempel langsung di file PDF/DOCX
+-   Halaman publik `/verifikasi` untuk mengecek keaslian dokumen — masukkan kode atau scan QR, bisa juga upload file untuk dicocokkan hash-nya
+-   Setiap pengecekan tercatat di log verifikasi (audit trail keaslian dokumen)
+
 ### 👥 Role-Based Access Control
 
 -   4 Role: Admin, Kabid (Kepala Bidang), Kasi (Kepala Seksi), Staff
 -   Akses halaman dan fitur menyesuaikan role
 -   Data terisolasi berdasarkan hierarki
+-   Akun pengguna dibuat oleh Admin (tidak ada pendaftaran mandiri/self-register)
 
 ### 🌳 Hierarki Organisasi
 
 -   Struktur parent-child (Kabid → Kasi → Staff)
--   List penerima disposisi otomatis sesuai bawahan langsung
--   Validasi hierarki untuk mencegah disposisi tidak valid
+-   List penerima disposisi/approval otomatis sesuai bawahan langsung
+-   Validasi hierarki untuk mencegah disposisi atau approval tidak valid
 
 ### 🔍 Pencarian & Filter
 
@@ -75,12 +92,12 @@ Sistem ini dirancang untuk kebutuhan pengarsipan surat digital di lingkungan ins
 
 ## 👤 Role & Hak Akses
 
-| Role                         | Hak Akses Inti                                                                                                                         |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| **Admin**                    | • Input surat masuk & upload dokumen<br>• Manajemen akun & role<br>• Monitoring semua proses surat<br>• Akses ke semua data sistem     |
-| **Kabid**<br>(Kepala Bidang) | • Terima disposisi surat masuk<br>• Disposisi ke Kasi bawahan<br>• Validasi/ACC final surat keluar<br>• View riwayat keputusan         |
-| **Kasi**<br>(Kepala Seksi)   | • Terima disposisi dari Kabid<br>• Disposisi ke Staff bawahan<br>• Review & validasi surat keluar dari Staff<br>• Monitoring tugas tim |
-| **Staff**<br>(Pelaksana)     | • Terima disposisi dari Kasi<br>• Tindaklanjut surat masuk<br>• Upload draft surat keluar<br>• Revisi surat yang ditolak               |
+| Role                         | Hak Akses Inti                                                                                                                                                                    |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Admin**                    | • Input surat masuk & upload dokumen<br>• Manajemen akun & role<br>• Kelola master jenis surat<br>• Monitoring semua proses surat<br>• Akses ke semua data sistem                    |
+| **Kabid**<br>(Kepala Bidang) | • Terima disposisi surat masuk<br>• Disposisi ke Kasi bawahan<br>• Validasi/ACC final surat keluar & pengajuan surat<br>• **Tanda tangan digital** dokumen final<br>• View riwayat keputusan |
+| **Kasi**<br>(Kepala Seksi)   | • Terima disposisi dari Kabid<br>• Disposisi ke Staff bawahan<br>• Review & validasi surat keluar / pengajuan surat dari Staff<br>• Monitoring tugas tim                             |
+| **Staff**<br>(Pelaksana)     | • Terima disposisi dari Kasi<br>• Tindaklanjut surat masuk<br>• Upload draft surat keluar<br>• Ajukan Surat Cuti/Tugas/Nota Dinas/Undangan<br>• Revisi surat yang ditolak            |
 
 ---
 
@@ -129,11 +146,37 @@ graph TD
 4. **Kabid** review → **ACC final** → surat menjadi arsip resmi
 5. Jika revisi/tolak → notifikasi ke Staff untuk perbaikan
 
+### 3️⃣ Pengajuan Surat & Tanda Tangan Digital (Bottom-Up)
+
+```mermaid
+graph TD
+    A[Staff Ajukan Surat] --> B{Kasi Review}
+    B -->|ACC| C[Teruskan ke Kabid]
+    B -->|Revisi| D[Kembali ke Staff]
+    B -->|Tolak| E[Status: Ditolak]
+    C --> F{Kabid Review}
+    F -->|ACC| G[Kabid Tandatangani Digital]
+    F -->|Revisi| D
+    F -->|Tolak| E
+    G --> H[Generate PDF/DOCX + QR Verifikasi]
+    H --> I[Status: Selesai - Dikirim ke Staff]
+```
+
+**Detail Proses:**
+
+1. **Staff** mengajukan surat (Cuti/Tugas/Nota Dinas/Undangan) lewat form sesuai jenisnya
+2. **Kasi** memeriksa → **ACC** / **Revisi** / **Tolak** + catatan
+3. Jika ACC → diteruskan ke **Kabid** untuk approval final
+4. **Kabid** ACC final → klik **Tandatangani** → sistem membuat tanda tangan digital (RSA-2048/SHA-512) dan menempelkan QR verifikasi ke dokumen final
+5. Dokumen final (PDF & DOCX) otomatis dikirim kembali ke **Staff** pemohon, status menjadi **Selesai**
+6. Siapa pun dapat memverifikasi keaslian dokumen lewat halaman publik `/verifikasi`
+
 > 📌 **Catatan Penting:**
 >
-> -   Setiap level harus membaca dokumen sebelum bisa ambil keputusan
+> -   Setiap level harus membaca/memeriksa dokumen sebelum bisa ambil keputusan
 > -   Catatan wajib diisi saat revisi atau tolak
 > -   History semua keputusan tersimpan untuk audit trail
+> -   Satu dokumen hanya bisa ditandatangani **sekali** — tanda tangan terikat secara kriptografis pada isi dokumen saat itu
 
 ---
 
@@ -141,14 +184,17 @@ graph TD
 
 ### Backend
 
--   **Laravel 10.x** - PHP Framework
--   **MySQL 8.0** - Database
--   **PHP 8.1+** - Programming Language
+-   **Laravel 12.x** - PHP Framework
+-   **PHP 8.2+** - Programming Language
+-   **SQLite** - Database default untuk development lokal (MySQL/MariaDB juga didukung, tinggal ganti konfigurasi `.env`)
+-   **OpenSSL (RSA-2048/SHA-512)** - Tanda tangan digital dokumen
+-   Encoder QR code custom (tanpa dependency eksternal) untuk penempelan QR ke PDF/DOCX
 
 ### Frontend
 
--   **Bootstrap 5.3** - CSS Framework
--   **Font Awesome 6.4** - Icons
+-   **Bootstrap 5.3** (CDN) - CSS Framework utama tampilan
+-   **Font Awesome 6.4** (CDN) - Icons
+-   **Tailwind CSS 4** + **Vite** - Asset pipeline bawaan starter kit Laravel
 -   **Flatpickr** - Date Picker
 -   **Vanilla JavaScript** - Interactivity
 
@@ -156,7 +202,7 @@ graph TD
 
 -   **Composer** - PHP Dependency Manager
 -   **NPM/Node.js** - Frontend Asset Build
--   **XAMPP/Laragon** - Local Development
+-   **XAMPP/Laragon** - Local Development (opsional)
 
 ---
 
@@ -164,18 +210,19 @@ graph TD
 
 ### Prasyarat
 
--   PHP >= 8.1
+-   PHP >= 8.2 (ekstensi `openssl` dan `gd` wajib aktif)
 -   Composer
--   MySQL/MariaDB
 -   Node.js & NPM
--   XAMPP/Laragon (untuk Windows)
+-   MySQL/MariaDB (opsional — default project ini sudah jalan dengan SQLite tanpa instalasi database terpisah)
 
-### Langkah Instalasi
+> 💻 **Tidak punya PHP/Node terinstall di Windows?** Lihat bagian [Setup Cepat Tanpa Install (Windows)](#-setup-cepat-tanpa-install-windows) di bawah.
+
+### Langkah Instalasi (Standar)
 
 #### 1️⃣ Clone Repository
 
 ```bash
-git clone https://github.com/suhastra13/Sistem-arsip-surat-hierarki.git
+git clone https://github.com/SuhastraDev/Sistem-arsip-surat-hierarki.git
 cd Sistem-arsip-surat-hierarki
 ```
 
@@ -201,6 +248,21 @@ php artisan key:generate
 
 #### 4️⃣ Konfigurasi Database
 
+**Opsi A — SQLite (default, paling cepat, tidak perlu server database):**
+
+```bash
+# Buat file database kosong
+type nul > database\database.sqlite
+```
+
+Pastikan `.env` berisi:
+
+```env
+DB_CONNECTION=sqlite
+```
+
+**Opsi B — MySQL/MariaDB:**
+
 Buat database baru di phpMyAdmin dengan nama `arsip_surat`, lalu edit file `.env`:
 
 ```env
@@ -220,6 +282,7 @@ php artisan migrate --seed
 
 # Atau jalankan seeder tertentu
 php artisan db:seed --class=UserSeeder
+php artisan db:seed --class=JenisSuratSeeder
 ```
 
 #### 6️⃣ Create Storage Link
@@ -236,7 +299,7 @@ php artisan storage:link
 php artisan serve
 ```
 
-**Terminal 2** - Frontend Assets (opsional jika pakai Vite):
+**Terminal 2** - Frontend Assets (opsional jika ada perubahan CSS/JS):
 
 ```bash
 npm run dev
@@ -248,24 +311,55 @@ npm run dev
 
 ---
 
+### 💻 Setup Cepat Tanpa Install (Windows)
+
+Repository ini menyediakan **PHP & Node.js portable** di folder `.runtime/` (tidak perlu install apa pun ke sistem) beserta script [`start-local.ps1`](start-local.ps1).
+
+```powershell
+# Cukup jalankan dari root project (asalkan vendor/, node_modules/, dan database sudah disiapkan sesuai langkah di atas)
+.\start-local.ps1
+```
+
+Script ini otomatis memanggil PHP portable (`\.runtime\php-8.3.33\php.exe`) dan menjalankan `artisan serve` di `http://127.0.0.1:8000`.
+
+**Ingin bisa ketik `php`/`node`/`npm` langsung di terminal manapun secara permanen?** Tambahkan folder berikut ke *Environment Variables* → *Path* (User) di Windows:
+
+```
+<lokasi-project>\.runtime\php-8.3.33
+<lokasi-project>\.runtime\node-v22.23.0-win-x64
+```
+
+Setelah itu tutup & buka ulang terminal, lalu `php artisan serve` bisa dijalankan langsung tanpa script tambahan.
+
+---
+
 ## 🔑 Akun Demo
 
-Seeder otomatis membuat akun demo berikut:
+Seeder `UserSeeder` otomatis membuat akun demo berikut:
 
-| Role         | Email            | Password   | Hierarki                     |
-| ------------ | ---------------- | ---------- | ---------------------------- |
-| 👑 **Admin** | admin@dishut.com | `password` | Administrator sistem         |
-| 👔 **Kabid** | kabid@dishut.com | `password` | Kepala Bidang (level 1)      |
-| 👨‍💼 **Kasi**  | kasi@dishut.com  | `password` | Kepala Seksi (parent: Kabid) |
-| 👤 **Staff** | staf@dishut.com  | `password` | Pelaksana 1 (parent: Kasi)   |
-| 👤 **Staff** | staf2@dishut.com | `password` | Pelaksana 2 (parent: Kasi)   |
+| Role         | Nama                | Email            | Password   | Hierarki                     |
+| ------------ | -------------------- | ---------------- | ---------- | ----------------------------- |
+| 👑 **Admin** | Administrator        | admin@dishut.com | `password` | Administrator sistem          |
+| 👔 **Kabid** | Bapak Budi (Kabid)   | kabid@dishut.com | `password` | Kepala Bidang Konservasi      |
+| 👨‍💼 **Kasi**  | Ibu Siti (Kasi)      | kasi@dishut.com  | `password` | Kasi Rehabilitasi Hutan (parent: Kabid) |
+| 👤 **Staff** | Mas Asep (Staf)      | staf@dishut.com  | `password` | Staf Lapangan (parent: Kasi)  |
+| 👤 **Staff** | Mba Dewi (Staf)      | staf2@dishut.com | `password` | Staf Administrasi (parent: Kasi) |
 
 ### Login Testing Flow
+
+**Surat Masuk/Keluar:**
 
 1. Login sebagai **Admin** → Input surat masuk
 2. Login sebagai **Kabid** → Disposisi ke Kasi
 3. Login sebagai **Kasi** → Disposisi ke Staff
 4. Login sebagai **Staff** → Baca & tindaklanjut
+
+**Pengajuan Surat + Tanda Tangan Digital:**
+
+1. Login sebagai **Staff** → Ajukan Surat Cuti/Tugas/Nota Dinas/Undangan
+2. Login sebagai **Kasi** → Periksa & ACC pengajuan
+3. Login sebagai **Kabid** → ACC final → **Tandatangani** dokumen
+4. Buka `/verifikasi`, masukkan kode verifikasi (atau scan QR di dokumen) untuk cek keasliannya
 
 > ⚠️ **PENTING:** Untuk produksi, **wajib ganti semua password** dan hapus akun demo!
 
@@ -300,6 +394,13 @@ Seeder otomatis membuat akun demo berikut:
 ---
 
 ## 🔒 Keamanan
+
+### Tanda Tangan Digital
+
+-   Setiap Kabid punya sepasang kunci **RSA-2048** unik (kunci privat disimpan terenkripsi di database)
+-   Dokumen di-hash dengan **SHA-512** sebelum ditandatangani — perubahan sekecil apa pun pada isi dokumen membuat verifikasi gagal
+-   Verifikasi publik tidak memerlukan login, tersedia di `/verifikasi`
+-   **Catatan skop:** ini adalah tanda tangan digital *self-signed* (dikelola sendiri oleh sistem) untuk kebutuhan pembuktian konsep internal instansi, bukan tanda tangan elektronik tersertifikasi PSrE/BSrE resmi
 
 ### Untuk Development
 
@@ -353,7 +454,7 @@ Proyek ini dibuat untuk kebutuhan **akademik dan demo**. Silakan gunakan dan mod
 
 ## 👨‍💻 Developer
 
-Dikembangkan oleh [Suhastra13](https://github.com/suhastra13)
+Dikembangkan oleh [SuhastraDev](https://github.com/SuhastraDev)
 
 
 
