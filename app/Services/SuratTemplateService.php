@@ -669,7 +669,8 @@ class SuratTemplateService
             ]);
 
             if ($pengajuanSurat->digitalSignature) {
-                $xml = $this->replaceWordTextWithSignatureBlock($xml, 'Dr. SYAFRUL YUNARDY, S.Hut.,M.E', $pengajuanSurat);
+                $xml = $this->replaceWordTextWithSignatureBlock($xml, 'Dr. SYAFRUL YUNARDY, S.Hut.,M.E', $pengajuanSurat, true);
+                $xml = $this->replaceWordText($xml, 'IP. 197306192000031002', 'NIP. '.($pengajuanSurat->digitalSignature->signer->nip ?? '197306192000031002'));
             } elseif (! empty($data['penandatangan'])) {
                 // penandatangan is stored as "Nama - Jabatan"; the TTD area only needs the name.
                 $namaPenandatangan = trim(explode(' - ', (string) $data['penandatangan'])[0]);
@@ -1289,7 +1290,7 @@ class SuratTemplateService
         }
     }
 
-    private function replaceWordTextWithSignatureBlock(string $xml, string $search, PengajuanSurat $pengajuanSurat): string
+    private function replaceWordTextWithSignatureBlock(string $xml, string $search, PengajuanSurat $pengajuanSurat, bool $leadingTabs = false): string
     {
         $dom = new \DOMDocument;
         $previous = libxml_use_internal_errors(true);
@@ -1307,12 +1308,12 @@ class SuratTemplateService
         // Prefer the most specific paragraph over its ancestor table cell so a
         // multi-paragraph signature cell (heading / name / NIP as separate lines)
         // only has its matching name line swapped, not the whole cell wiped.
-        return $this->replaceWordTextWithSignatureBlockInNodes($dom, $xpath, '//w:p', $search, $pengajuanSurat)
-            ?? $this->replaceWordTextWithSignatureBlockInNodes($dom, $xpath, '//w:tc', $search, $pengajuanSurat)
+        return $this->replaceWordTextWithSignatureBlockInNodes($dom, $xpath, '//w:p', $search, $pengajuanSurat, $leadingTabs)
+            ?? $this->replaceWordTextWithSignatureBlockInNodes($dom, $xpath, '//w:tc', $search, $pengajuanSurat, $leadingTabs)
             ?? $xml;
     }
 
-    private function replaceWordTextWithSignatureBlockInNodes(\DOMDocument $dom, \DOMXPath $xpath, string $query, string $search, PengajuanSurat $pengajuanSurat): ?string
+    private function replaceWordTextWithSignatureBlockInNodes(\DOMDocument $dom, \DOMXPath $xpath, string $query, string $search, PengajuanSurat $pengajuanSurat, bool $leadingTabs): ?string
     {
         $searchText = $this->normalizeWordText($search);
 
@@ -1350,7 +1351,7 @@ class SuratTemplateService
             }
 
             $fragmentDom = new \DOMDocument;
-            $fragmentDom->loadXML('<root xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'.$this->docxSignatureRuns($pengajuanSurat).'</root>');
+            $fragmentDom->loadXML('<root xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'.$this->docxSignatureRuns($pengajuanSurat, $leadingTabs).'</root>');
 
             foreach (iterator_to_array($fragmentDom->documentElement->childNodes) as $child) {
                 $paragraph->appendChild($dom->importNode($child, true));
@@ -1489,7 +1490,7 @@ class SuratTemplateService
         $trPr->appendChild($dom->createElementNS($namespace, 'w:cantSplit'));
     }
 
-    private function docxSignatureRuns(PengajuanSurat $pengajuanSurat): string
+    private function docxSignatureRuns(PengajuanSurat $pengajuanSurat, bool $leadingTabs = false): string
     {
         $signature = $pengajuanSurat->digitalSignature;
 
@@ -1500,15 +1501,22 @@ class SuratTemplateService
         $runProperties = '<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:sz w:val="18"/>';
         $boldProperties = '<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/><w:b/><w:sz w:val="20"/>';
 
-        return '<w:r><w:rPr>'.$runProperties.'</w:rPr><w:t>Scan QR verifikasi</w:t></w:r>'
+        return $this->docxSignatureLine('Scan QR verifikasi', $runProperties, $leadingTabs)
             .'<w:r><w:br/></w:r>'
-            .'<w:r><w:rPr>'.$runProperties.'</w:rPr><w:t>'.$this->qrCodeService->marker().'</w:t></w:r>'
+            .$this->docxSignatureLine($this->qrCodeService->marker(), $runProperties, $leadingTabs)
             .'<w:r><w:br/></w:r>'
-            .'<w:r><w:rPr>'.$runProperties.'</w:rPr><w:t>'.$this->xmlText($signature->verification_code).'</w:t></w:r>'
+            .$this->docxSignatureLine($signature->verification_code, $runProperties, $leadingTabs)
             .'<w:r><w:br/></w:r>'
-            .'<w:r><w:rPr>'.$runProperties.'</w:rPr><w:t>Ditandatangani digital</w:t></w:r>'
+            .$this->docxSignatureLine('Ditandatangani digital', $runProperties, $leadingTabs)
             .'<w:r><w:br/></w:r>'
-            .'<w:r><w:rPr>'.$boldProperties.'</w:rPr><w:t>'.$this->xmlText($signature->signer->name).'</w:t></w:r>';
+            .$this->docxSignatureLine($signature->signer->name, $boldProperties, $leadingTabs);
+    }
+
+    private function docxSignatureLine(string $text, string $runProperties, bool $leadingTab): string
+    {
+        $tab = $leadingTab ? '<w:r><w:tab/></w:r>' : '';
+
+        return $tab.'<w:r><w:rPr>'.$runProperties.'</w:rPr><w:t>'.$this->xmlText($text).'</w:t></w:r>';
     }
 
     private function embedSignatureQrPlaceholders(ZipArchive $zip, string $xml, PengajuanSurat $pengajuanSurat): string

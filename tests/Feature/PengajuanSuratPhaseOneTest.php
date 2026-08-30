@@ -819,6 +819,11 @@ class PengajuanSuratPhaseOneTest extends TestCase
             $this->assertTrue($this->docxHasQrImage($docx), $slug.' signed DOCX has QR PNG image.');
             $this->assertStringContainsString($signature->verification_code, $documentXml, $slug.' signed DOCX has verification code.');
             $this->assertStringContainsString($kabid->name, $documentXml, $slug.' signed DOCX has signer name.');
+
+            if ($slug === 'surat-tugas') {
+                $this->assertStringContainsString('NIP. '.$kabid->nip, $documentXml);
+                $this->assertStringNotContainsString('IP. 197306192000031002', $documentXml);
+            }
         }
     }
 
