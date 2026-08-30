@@ -1487,9 +1487,11 @@ class PengajuanSuratPhaseOneTest extends TestCase
             ->assertOk()
             ->assertSee($signature->verification_code);
 
-        $this->get(route('verification.qr', $signature->verification_code))
+        $qrResponse = $this->get(route('verification.qr', $signature->verification_code))
             ->assertOk()
             ->assertHeader('Content-Type', 'image/png');
+        $decodedQr = (new \chillerlan\QRCode\QRCode)->readFromBlob($qrResponse->getContent());
+        $this->assertSame(route('verification.show', $signature->verification_code), $decodedQr->data);
 
         $this->actingAs($staff)
             ->get(route('pengajuan-surat.preview', $pengajuan))

@@ -1547,7 +1547,7 @@ class SuratTemplateService
         $target = 'media/'.$imageName;
         $payload = route('verification.show', $signature->verification_code);
 
-        $zip->addFromString('word/'.$target, $this->qrCodeService->png($payload, 4, 4));
+        $zip->addFromString('word/'.$target, $this->qrCodeService->png($payload));
 
         if ($ensureContentType) {
             $this->ensurePngContentType($zip);
